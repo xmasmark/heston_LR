@@ -178,11 +178,6 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         d1V = U*d1vM;
         d2V = U*d2vM;
 
-        a = 2;
-        b = 4;
-        c = a*b;
-        d = a-b;
-
         % Compute mixed derivative
         %mixedDerivative = MDerivativeC(firstVDerivative, ds, 0, 1, boundaryMatrix_mixed);
 
