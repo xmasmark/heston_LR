@@ -202,9 +202,10 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         A2 = 0.5 * S2Matrix * d2sM*U * VMatrix;
         B2 = 0.5 * S2Matrix * d2SB;
         A3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1vM'*U')';
-        B3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB')';
+        %B3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB')';
+        B3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB)';
         A4 = 0.5 * sigma^2 * U * d2vM * VMatrix;
-        B4 = 0.5 * sigma^2 * d2VB * VMatrix;
+        B4 = 0.5 * sigma^2 * d2VB' * VMatrix;
         A5 = rho * sigma * SMatrix * d1sM*U*d1vM * VMatrix;
         B5 = rho * sigma * SMatrix * dSVB * VMatrix;
 
@@ -217,8 +218,6 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         U_vec = U(:);
 
         A_vec = A(:);
-
-        boundaryV = boundaryMatrixT';
 
         %combined_boundary_conditions = boundaryMatrix_S(:) + boundaryV(:) + boundaryMatrix_mixed(:);
         combined_boundary_conditions = B1+B2+B3+B4+B5;
