@@ -164,9 +164,11 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         d1S = d1sM*U;
         d2S = d2sM*U;
         d1SB = bm_S;
-        d2SB = bm_S2;
+        %d2SB = bm_S2;
+        d2SB = zeros(NS,NV);
         d1VB = bm_V1;
-        d2VB = bm_V1;
+        %d2VB = bm_V1;
+        d2VB = zeros(NV,NS);
         dSVB = bm_SV;
 
         % Compute first and second derivatives in V
@@ -206,7 +208,10 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         B3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB)';
         A4 = 0.5 * sigma^2 * U * d2vM * VMatrix;
         B4 = 0.5 * sigma^2 * d2VB' * VMatrix;
-        A5 = rho * sigma * SMatrix * d1sM*U*d1vM * VMatrix;
+        %A5 = rho * sigma * SMatrix * d1sM*U*d1vM * VMatrix;
+        mixedDerivative = d1sM * U * d1vM;
+        %A5 = rho * sigma * (SMatrix * d1sM * (U * d1vM)) * VMatrix;
+        A5 = rho * sigma * (SMatrix * mixedDerivative) * VMatrix;
         B5 = rho * sigma * SMatrix * dSVB * VMatrix;
 
         % Combine into matrix A

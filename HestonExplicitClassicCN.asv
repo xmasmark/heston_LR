@@ -164,9 +164,11 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         d1S = d1sM*U;
         d2S = d2sM*U;
         d1SB = bm_S;
-        d2SB = bm_S2;
+        %d2SB = bm_S2;
+        d2SB = zeros(NS,NV);
         d1VB = bm_V1;
-        d2VB = bm_V1;
+        %d2VB = bm_V1;
+        d2VB = zeros(NV,NS);
         dSVB = bm_SV;
 
         % Compute first and second derivatives in V
@@ -200,9 +202,15 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         A1 = (r-q) * SMatrix * d1sM * U;
         B1 = (r-q) * SMatrix * d1SB;
         A2 = 0.5 * S2Matrix * d2sM*U * VMatrix;
+        B2 = 0.5 * S2Matrix * d2SB;
         A3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1vM'*U')';
+        %B3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB')';
+        B3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB)';
         A4 = 0.5 * sigma^2 * U * d2vM * VMatrix;
-        A5 = rho * sigma * SMatrix * d1sM*U*d1vM * VMatrix;
+        B4 = 0.5 * sigma^2 * d2VB' * VMatrix;
+        %A5 = rho * sigma * SMatrix * d1sM*U*d1vM * VMatrix;
+        A5 = rho * sigma * (SMatrix * d1sM * (U * d1vM)) * VMatrix;
+        B5 = rho * sigma * SMatrix * dSVB * VMatrix;
 
         % Combine into matrix A
         A = A1 + A2 + A3 + A4 + A5;
@@ -214,16 +222,16 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
 
         A_vec = A(:);
 
-        boundaryV = boundaryMatrixT';
-
-        combined_boundary_conditions = boundaryMatrix_S(:) + boundaryV(:) + boundaryMatrix_mixed(:);
+        %combined_boundary_conditions = boundaryMatrix_S(:) + boundaryV(:) + boundaryMatrix_mixed(:);
+        combined_boundary_conditions = B1+B2+B3+B4+B5;
+        
         %combined_boundary_conditions = boundaryMatrix_S(:);
 
         % LHS and RHS matrices for Crank-Nicolson (NS*NV x NS*NV identity)
         lhs_matrix = ((1-(dt*r/2))*eye(NS*NV) + (dt/2)*A_vec);  % Matrix multiplication directly on A, ensuring it's a vectorized operation
         %rhs_matrix = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*A_vec) * U_vec - dt*combined_boundary_conditions(:);  % Ensure U_vec and boundary conditions are vectors
-        rhs_matrix = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*A_vec) - dt*combined_boundary_conditions(:);  % Ensure U_vec and boundary conditions are vectors
-        %rhs_matrix_old = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*A_vec) * U_vec - dt*combined_boundary_conditions(:);  % Ensure U_vec and boundary conditions are vectors
+        %rhs_matrix = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*A_vec) - dt*combined_boundary_conditions(:);  % Ensure U_vec and boundary conditions are vectors
+        rhs_matrix = ((1+(dt*r/2))*U_vec - (dt/2)*A_vec) - dt*combined_boundary_conditions(:);  % Ensure U_vec and boundary conditions are vectors
         %rhs_matrix_no_bc = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*A_vec);
 
         % Solve for U_vec at the next time step
