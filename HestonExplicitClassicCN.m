@@ -159,6 +159,9 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         % firstSDerivative = MDerivativeC(U, ds, 0, 1, boundaryMatrix_S);
         % secondSDerivative = MSecondDerivativePlusC(U, ds, 0, 1, boundaryMatrix_S);
 
+
+
+
         d1sM = MDerivativeVM(U, ds, 0, 1);
         d2sM = MSecondDerivativePlusCVM(U, ds, 0, 1);
         d1S = d1sM*U;
@@ -172,8 +175,8 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         dSVB = bm_SV;
 
         % Compute first and second derivatives in V
-        firstVDerivative = MDerivativeC(U', dv, 1, 1, boundaryMatrixT)';
-        secondVDerivative = MSecondDerivativePlusC(U', dv, 1, 1, boundaryMatrixT)';
+        %firstVDerivative = MDerivativeC(U', dv, 1, 1, boundaryMatrixT)';
+        %secondVDerivative = MSecondDerivativePlusC(U', dv, 1, 1, boundaryMatrixT)';
     
         d1vM = MDerivativeVM(U', dv, 1, 1);
         d2vM = MSecondDerivativePlusCVM(U', dv, 1, 1);
@@ -203,26 +206,61 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         B1 = (r-q) * SMatrix * d1SB;
         A2 = 0.5 * S2Matrix * d2sM*U * VMatrix;
         B2 = 0.5 * S2Matrix * d2SB;
-        A3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1vM'*U')';
-        %B3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB')';
-        B3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB)';
+        %A3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1vM'*U')';
+        A3 = U*d1vM'*((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix));
+        B3 =         ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB)';
         A4 = 0.5 * sigma^2 * U * d2vM * VMatrix;
         B4 = 0.5 * sigma^2 * d2VB' * VMatrix;
-        %A5 = rho * sigma * SMatrix * d1sM*U*d1vM * VMatrix;
-        mixedDerivative = d1sM * U * d1vM;
+        mixedDerivative = d1sM * U * d1vM';
         %A5 = rho * sigma * (SMatrix * d1sM * (U * d1vM)) * VMatrix;
         A5 = rho * sigma * (SMatrix * mixedDerivative) * VMatrix;
         B5 = rho * sigma * SMatrix * dSVB * VMatrix;
 
         % Combine into matrix A
         A = A1 + A2 + A3 + A4 + A5;
+
+        Aminus = A1 + A2 + A4 + A5;
     
+        AminusV = Aminus(:);
         % Crank-Nicolson update
         
         %U is size NS,NV, the vectorised form is NS*NV,1
         U_vec = U(:);
 
         A_vec = A(:);
+
+
+        IS = eye(NS);
+        IV = eye(NV);
+
+        %v suffix stands for Vectorised
+        %A1v = (r-q) * SMatrix * d1sM * U;
+        A1v = (r-q)*kron(IV,SMatrix*d1sM)* U_vec;
+        %A2v = 0.5 * S2Matrix * d2sM*U * VMatrix;
+        A2v = 0.5 * kron(VMatrix,S2Matrix*d2sM)*U_vec;
+        %A3v = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1vM'*U')';
+        %A3v = (kron(IS,(kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix)* d1vM')*U')';
+        %A4v = 0.5 * sigma^2 * U * d2vM * VMatrix;
+        A4v = 0.5 * sigma^2 * kron(VMatrix * d2vM, IS)* U_vec;
+        %A5v = rho * sigma * (SMatrix * d1sM * U * d1vM) * VMatrix;
+
+        %mixedDerivative = d1sM * U * d1vM;
+        %A5 = rho * sigma * (SMatrix * d1sM * (U * d1vM)) * VMatrix;
+        %A5 = rho * sigma * SMatrix * d1sM * U * d1vM * VMatrix;
+
+
+        A5v = rho * sigma * kron(VMatrix * d1vM', SMatrix * d1sM)*U_vec;
+        % % % 
+
+        Av = A1v+A2v+A4v+A5v;
+
+        test1 = A1(:)-A1v;
+        test2 = A2(:)-A2v;
+        test4 = A4(:)-A4v;
+        test5 = A5(:)-A5v;
+
+        test = AminusV-Av;
+
 
         %combined_boundary_conditions = boundaryMatrix_S(:) + boundaryV(:) + boundaryMatrix_mixed(:);
         combined_boundary_conditions = B1+B2+B3+B4+B5;
@@ -464,20 +502,20 @@ function laplacian = MSecondDerivativePlusCVM(L, delta, boundaryConditionLeft, b
     
     % Apply boundary conditions for left boundary
     if boundaryConditionLeft == 0  % Dirichlet boundary condition
-        laplacian(1, 1) = 1;
-        laplacian(1, 2) = 0;  % Dirichlet: boundary is set to a specific value
+        %laplacian(1, 1) = 1;
+        %laplacian(1, 2) = 0;  % Dirichlet: boundary is set to a specific value
     elseif boundaryConditionLeft == 1  % Neumann boundary condition
-        laplacian(1, 1) = -2;
-        laplacian(1, 2) = 2;  % Neumann: derivative at the boundary
+        laplacian(1, 1) = -1;
+        %laplacian(1, 2) = 2;  % Neumann: derivative at the boundary
     end
 
     % Apply boundary conditions for right boundary
     if boundaryConditionRight == 0  % Dirichlet boundary condition
-        laplacian(n, n) = 1;
-        laplacian(n, n-1) = 0;  % Dirichlet: boundary is set to a specific value
+        %laplacian(n, n) = 1;
+        %laplacian(n, n-1) = 0;  % Dirichlet: boundary is set to a specific value
     elseif boundaryConditionRight == 1  % Neumann boundary condition
-        laplacian(n, n) = -2;
-        laplacian(n, n-1) = 2;  % Neumann: derivative at the boundary
+        laplacian(n, n) = -1;
+        %laplacian(n, n-1) = 2;  % Neumann: derivative at the boundary
     end
 
     % Scale the Laplacian by 1/h^2 for the second derivative
