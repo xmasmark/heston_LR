@@ -127,7 +127,7 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
     for t = 1:NT-1
 
         boundaryMatrix_S = zeros(NS, NV);
-        boundaryMatrix_S(NS,:) = (ds);  %Neumann condition at large S
+        boundaryMatrix_S(NS,:) = (1/ds);  %Neumann condition at large S
 
         bm_S=boundaryMatrix_S;
 
@@ -167,8 +167,8 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         d1S = d1sM*U;
         d2S = d2sM*U;
         d1SB = bm_S;
-        %d2SB = bm_S2;
-        d2SB = zeros(NS,NV);
+        d2SB = bm_S2;
+        %d2SB = zeros(NS,NV);
         d1VB = bm_V1;
         %d2VB = bm_V1;
         d2VB = zeros(NV,NS);
@@ -189,12 +189,37 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         %d1mM = MDerivativeVM(d1v, ds, 0, 1);
         %d1VS = d1sM*U*d1vM;
 
-        % Compute A1 to A5 using the derivatives
-        % A1 = (r - q) * SMatrix * firstSDerivative;
-        % A2 = 0.5 * (S2Matrix * secondSDerivative) * VMatrix;
-        % A3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * firstVDerivative')';
-        % A4 = 0.5 * sigma^2 * (secondVDerivative) * VMatrix;
-        % A5 = rho * sigma * SMatrix * mixedDerivative * VMatrix;
+
+        %%%%%% Debugging ancillaries start
+        boundaryMatrix_S = zeros(NS, NV);
+        boundaryMatrix_S(NS,:) = (1 / ds);  %Neumann condition at large S
+
+        %firstSDerivative = MDerivativeC(u, ds, 0, 1, zeros(NS, NV));
+        firstSDerivative = MDerivativeVM(U, ds, 0, 1)*U;
+        %secondSDerivative = MSecondDerivativePlusC(u, ds, 0, 1, zeros(NS, NV));
+        secondSDerivative = MSecondDerivativePlusCVM(U, ds, 0, 1)*U;
+        % Compute first derivative with respect to V
+        %firstVDerivative = MDerivativeC(u', dv, 1, 1, zeros(NV, NS))';  % Transposed result
+        firstVDerivative = U*MDerivativeVM(U', dv, 1, 1)';
+        IDNV = eye( NV ,'like', VMatrix );
+
+        % Compute second derivative with respect to V
+        %secondVDerivative = MSecondDerivativePlusC(u', dv, 1, 1, zeros(NV, NS))';  % Transposed result
+        secondVDerivative = U*MSecondDerivativePlusCVM(U', dv, 1, 1)';
+
+        % Compute mixed derivative
+        %boundaryMatrix_mixed = zeros(NS, NV);
+        %boundaryMatrix_mixed(NS,:) = (1 / ds);  % Neumann condition for mixed derivative
+        %mixedDerivative = MDerivativeC(firstVDerivative, ds, 0, 1, zeros(NS, NV));
+        mixedDerivative = d1sM * U * d1vM';
+
+        % Compute terms A1 to A5
+        A1o = (r - q) * SMatrix * firstSDerivative;
+        A2o = 0.5 * (S2Matrix * secondSDerivative) * VMatrix;
+        A3o = ((kappa * (theta*IDNV - VMatrix) - lambda * VMatrix) * firstVDerivative')';
+        A4o = 0.5 * sigma^2 * (secondVDerivative) * VMatrix;
+        A5o = rho * sigma * SMatrix * mixedDerivative * VMatrix;
+        %%%%%% Debugging ancillaries end
         
         % A1 = (r - q) * SMatrix * d1S;
         % A2 = 0.5 * (S2Matrix * d2S) * VMatrix;
@@ -205,7 +230,8 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         A1 = (r-q) * SMatrix * (d1sM*U);
         B1 = (r-q) * SMatrix * d1SB;
         A2 = 0.5 * S2Matrix*(d2sM*U)*VMatrix;
-        B2 = 0.5 * S2Matrix * d2SB;
+        %B2 = 0.5 * S2Matrix * d2SB;
+        B2 = 0.5 * S2Matrix * d2SB * VMatrix;
         %A3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1vM'*U')';
         A3 = (U*d1vM')*((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix));
         %A3 = U*d1vM*((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix));
@@ -254,17 +280,25 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
 
         Av = A1v+A2v+A3v+A4v+A5v;
 
-        test1 = A1(:)-A1v;
-        test2 = A2(:)-A2v;
-        test3 = A3(:)-A3v;
-        test4 = A4(:)-A4v;
-        test5 = A5(:)-A5v;
+        test1 = A1o(:)-A1v(:);
+        test2 = A2o(:)-A2v(:);
+        test3 = A3o(:)-A3v(:);
+        test4 = A4o(:)-A4v(:);
+        test5 = A5o(:)-A5v(:);
 
         test = A_vec-Av;
 
 
+        %A_vec = A1o(:)+A2o(:)+A3o(:)+A4o(:)+A5o(:);
+
+
         %combined_boundary_conditions = boundaryMatrix_S(:) + boundaryV(:) + boundaryMatrix_mixed(:);
         combined_boundary_conditions = B1+B2+B3+B4+B5;
+        
+        %Kronecker product result: 13.2823
+        %With zero boundaries: 13.2372!
+        %With boundaries reinstated: 11.9423
+        %combined_boundary_conditions = zeros(size(combined_boundary_conditions));
         
         %combined_boundary_conditions = boundaryMatrix_S(:);
 
