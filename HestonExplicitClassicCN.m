@@ -285,6 +285,14 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         A4v = 0.5 * sigma^2 * kron(VMatrix * d2vM, IS)* U_vec;
         A5v = rho * sigma * kron(VMatrix*d1vM, SMatrix*d1sM)*U_vec;
 
+        A1k = (r-q)*kron(IV,SMatrix*d1sM);
+        A2k = 0.5 * kron(VMatrix,S2Matrix*d2sM);
+        A3k = (kron((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix)* d1vM,IS));
+        A4k = 0.5 * sigma^2 * kron(VMatrix * d2vM, IS);
+        A5k = rho * sigma * kron(VMatrix*d1vM, SMatrix*d1sM);
+
+        AK= A1k+A2k+A3k+A4k+A5k;
+
         B1v = (r-q) * SMatrix * d1SB;
         B2v = 0.5 * S2Matrix * d2SB * VMatrix;
         B3v = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB)';
@@ -292,6 +300,7 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         B5v = rho * sigma * SMatrix * dSVB * VMatrix;
 
         Av = A1v+A2v+A3v+A4v+A5v;
+        Bv = B1v(:)+B2v(:)+B3v(:)+B4v(:)+B5v(:);
 
         test1 = A1o(:)-A1v(:);
         test2 = A2o(:)-A2v(:);
@@ -308,7 +317,7 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         %combined_boundary_conditions = boundaryMatrix_S(:) + boundaryV(:) + boundaryMatrix_mixed(:);
 
 
-        combined_boundary_conditions = B1+B2+B3+B4+B5;
+        %combined_boundary_conditions = B1+B2+B3+B4+B5;
 
         % % % % 
         % % % % B1v = kron(ones(NV, 1), B1(:));
@@ -325,7 +334,7 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         % % % % B4vv = B4v(:);
         % % % % B5vv = B5v(:);
 
-        combined_boundary_conditions = B1v + B2v + B3v + B4v + B5v;        
+        %combined_boundary_conditions = B1v + B2v + B3v + B4v + B5v;        
 
         %combined_boundary_conditions = B1+B3+B4+B5;
         
@@ -339,27 +348,23 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         % LHS and RHS matrices for Crank-Nicolson (NS*NV x NS*NV identity)
 
         %%%ROOT
-        %lhs_matrix = ((1-(dt*r/2))*eye(NS*NV) + (dt/2)*A_vec);  % Matrix multiplication directly on A, ensuring it's a vectorized operation
-        %lhs_matrix = ((1-(dt*r/2))*eye(NS*NV) + (dt/2)*Av);
-
-        
-        %rhs_matrix = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*A_vec) * U_vec - dt*combined_boundary_conditions(:);  % Ensure U_vec and boundary conditions are vectors
-        %rhs_matrix = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*A_vec) - dt*combined_boundary_conditions(:);  % Ensure U_vec and boundary conditions are vectors
+        lhs_matrix = ((1-(dt*r/2))*eye(NS*NV) + (dt/2)*AK);  
+        %lhs_matrix = ((1-(dt*r/2))*eye(NS*NV) - (dt/2)*Av);  
         %%%ROOT
-        %rhs_matrix = ((1+(dt*r/2))*U_vec - (dt/2)*A_vec) - dt*combined_boundary_conditions(:);  % Ensure U_vec and boundary conditions are vectors
-        %rhs_matrix = ((1+(dt*r/2))*U_vec - (dt/2)*Av) - dt*combined_boundary_conditions(:);  % Ensure U_vec and boundary conditions are vectors
-        
-        %Kronecker product result: 13.2823
-        %vectorised result: 13.2823
-
+        rhs_vector = ((1+(dt*r/2))*U_vec - (dt/2)*Av) - dt*Bv;
         % Solve for U_vec at the next time step
         %%%ROOT
-        %U_vec = lhs_matrix \ rhs_matrix;
+        U_vec_Crank_Nicolson = lhs_matrix \ rhs_vector;
         
         %U = (1-dt*r)*U+dt*(A1+A2+A3+A4+A5);
 
+        %this is in matrix form and works beautifully
+        %U = (1-dt*r)*U+dt*(A + B);
 
-        U = (1-dt*r)*U+dt*(A + B);
+        %this is in vector form and works beautifully
+        U_vec_Euler = (1-dt*r)*U_vec+dt*(Av + Bv);
+
+        diff = reshape(U_vec_Euler, [NS, NV]) - reshape(U_vec_Crank_Nicolson, [NS, NV]);
 
         %rewrite U in terms of Kronecker versions of A and B. Also, U
         %will be the U(:) version. Make it work.
@@ -368,7 +373,8 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         
 
         % Reshape U_vec back to the original NS x NV dimensions
-        %U = reshape(U_vec, [NS, NV]);
+        %U = reshape(U_vec_Euler, [NS, NV]);
+        U = reshape(U_vec_Crank_Nicolson, [NS, NV]);
 
     end    
 end
