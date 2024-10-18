@@ -246,6 +246,7 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
 
         % Combine into matrix A
         A = A1 + A2 + A3 + A4 + A5;
+        B = B1 + B2 + B3 + B4 + B5;
         %Aminus = A1 + A2 + A4 + A5;
         %AminusV = Aminus(:);
         % Crank-Nicolson update
@@ -256,27 +257,39 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         IS = eye(NS);
         IV = eye(NV);
 
-        %Matlab kron... you need to swap i,j (cols first, then rows).
-        %v suffix stands for Vectorised
-        %A1v = (r-q) * SMatrix * d1sM * U;
-        A1v = (r-q)*kron(IV,SMatrix*d1sM)* U_vec;
-        %A2v = 0.5 * S2Matrix * d2sM*U * VMatrix;
-        A2v = 0.5 * kron(VMatrix,S2Matrix*d2sM)*U_vec;
-        %A3v = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1vM'*U')';
-        %A3 = U*d1vM'*((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix));
-        A3v = (kron((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix)* d1vM,IS)*U_vec);
-
-        %A4v = 0.5 * sigma^2 * U * d2vM * VMatrix;
-        A4v = 0.5 * sigma^2 * kron(VMatrix * d2vM, IS)* U_vec;
-        %A5v = rho * sigma * (SMatrix * d1sM * U * d1vM) * VMatrix;
-
-        %mixedDerivative = d1sM * U * d1vM;
-        %A5 = rho * sigma * (SMatrix * d1sM * (U * d1vM)) * VMatrix;
-        %A5 = rho * sigma * SMatrix * d1sM * U * d1vM * VMatrix;
-
-
-        A5v = rho * sigma * kron(VMatrix*d1vM, SMatrix*d1sM)*U_vec;
+        % % % %Matlab kron... you need to swap i,j (cols first, then rows).
+        % % % %v suffix stands for Vectorised
+        % % % %A1v = (r-q) * SMatrix * d1sM * U;
+        % % % A1v = (r-q)*kron(IV,SMatrix*d1sM)* U_vec;
+        % % % %A2v = 0.5 * S2Matrix * d2sM*U * VMatrix;
+        % % % A2v = 0.5 * kron(VMatrix,S2Matrix*d2sM)*U_vec;
+        % % % %A3v = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1vM'*U')';
+        % % % %A3 = U*d1vM'*((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix));
+        % % % A3v = (kron((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix)* d1vM,IS)*U_vec);
         % % % 
+        % % % %A4v = 0.5 * sigma^2 * U * d2vM * VMatrix;
+        % % % A4v = 0.5 * sigma^2 * kron(VMatrix * d2vM, IS)* U_vec;
+        % % % %A5v = rho * sigma * (SMatrix * d1sM * U * d1vM) * VMatrix;
+        % % % 
+        % % % %mixedDerivative = d1sM * U * d1vM;
+        % % % %A5 = rho * sigma * (SMatrix * d1sM * (U * d1vM)) * VMatrix;
+        % % % %A5 = rho * sigma * SMatrix * d1sM * U * d1vM * VMatrix;
+        % % % 
+        % % % 
+        % % % A5v = rho * sigma * kron(VMatrix*d1vM, SMatrix*d1sM)*U_vec;
+        % % % 
+
+        A1v = (r-q)*kron(IV,SMatrix*d1sM)* U_vec;
+        A2v = 0.5 * kron(VMatrix,S2Matrix*d2sM)*U_vec;
+        A3v = (kron((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix)* d1vM,IS)*U_vec);
+        A4v = 0.5 * sigma^2 * kron(VMatrix * d2vM, IS)* U_vec;
+        A5v = rho * sigma * kron(VMatrix*d1vM, SMatrix*d1sM)*U_vec;
+
+        B1v = (r-q) * SMatrix * d1SB;
+        B2v = 0.5 * S2Matrix * d2SB * VMatrix;
+        B3v = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB)';
+        B4v = 0.5 * sigma^2 * d2VB' * VMatrix;
+        B5v = rho * sigma * SMatrix * dSVB * VMatrix;
 
         Av = A1v+A2v+A3v+A4v+A5v;
 
@@ -293,7 +306,275 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
 
 
         %combined_boundary_conditions = boundaryMatrix_S(:) + boundaryV(:) + boundaryMatrix_mixed(:);
+
+
         combined_boundary_conditions = B1+B2+B3+B4+B5;
+
+        % % % % 
+        % % % % B1v = kron(ones(NV, 1), B1(:));
+        % % % % B2v = kron(ones(NV, 1), B2(:));
+        % % % % % B3v = kron(B3(:), ones(NS, 1));
+        % % % % % B4v = kron(B4(:), ones(NS, 1));
+        % % % % % B5v = kron(B5(:), ones(NS, 1));
+        % % % % 
+        % % % % B3v = kron(ones(NS, 1), B3); % Size: (NS * NV, 1)
+        % % % % B4v = kron(ones(NS, 1), B4); % Size: (NS * NV, 1)
+        % % % % B5v = kron(ones(NS, 1), B5); % Size: (NS * NV, 1)
+        % % % % 
+        % % % % B3vv = B3v(:);
+        % % % % B4vv = B4v(:);
+        % % % % B5vv = B5v(:);
+
+        combined_boundary_conditions = B1v + B2v + B3v + B4v + B5v;        
+
+        %combined_boundary_conditions = B1+B3+B4+B5;
+        
+        %Kronecker product result: 13.2823
+        %With zero boundaries: 13.2372!
+        %With boundaries reinstated: 11.9423
+        %combined_boundary_conditions = zeros(size(combined_boundary_conditions));
+        
+        %combined_boundary_conditions = boundaryMatrix_S(:);
+
+        % LHS and RHS matrices for Crank-Nicolson (NS*NV x NS*NV identity)
+
+        %%%ROOT
+        %lhs_matrix = ((1-(dt*r/2))*eye(NS*NV) + (dt/2)*A_vec);  % Matrix multiplication directly on A, ensuring it's a vectorized operation
+        %lhs_matrix = ((1-(dt*r/2))*eye(NS*NV) + (dt/2)*Av);
+
+        
+        %rhs_matrix = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*A_vec) * U_vec - dt*combined_boundary_conditions(:);  % Ensure U_vec and boundary conditions are vectors
+        %rhs_matrix = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*A_vec) - dt*combined_boundary_conditions(:);  % Ensure U_vec and boundary conditions are vectors
+        %%%ROOT
+        %rhs_matrix = ((1+(dt*r/2))*U_vec - (dt/2)*A_vec) - dt*combined_boundary_conditions(:);  % Ensure U_vec and boundary conditions are vectors
+        %rhs_matrix = ((1+(dt*r/2))*U_vec - (dt/2)*Av) - dt*combined_boundary_conditions(:);  % Ensure U_vec and boundary conditions are vectors
+        
+        %Kronecker product result: 13.2823
+        %vectorised result: 13.2823
+
+        % Solve for U_vec at the next time step
+        %%%ROOT
+        %U_vec = lhs_matrix \ rhs_matrix;
+        
+        %U = (1-dt*r)*U+dt*(A1+A2+A3+A4+A5);
+
+
+        U = (1-dt*r)*U+dt*(A + B);
+
+        %rewrite U in terms of Kronecker versions of A and B. Also, U
+        %will be the U(:) version. Make it work.
+        %for the sake of comparison, reshape to rectangular
+
+        
+
+        % Reshape U_vec back to the original NS x NV dimensions
+        %U = reshape(U_vec, [NS, NV]);
+
+    end    
+end
+
+function CN
+
+        boundaryMatrix_S = zeros(NS, NV);
+        boundaryMatrix_S(NS,:) = (1/ds);  %Neumann condition at large S
+
+        bm_S=boundaryMatrix_S;
+
+        boundaryMatrix_S2 = zeros(NS, NV);
+        boundaryMatrix_S2(NS,:) = (1/ds);  %Neumann condition at large S
+
+        bm_S2=boundaryMatrix_S2;
+
+        boundaryMatrix_V = zeros(NS, NV);
+        boundaryMatrixT = boundaryMatrix_V';  % Transpose for volatility derivatives
+        boundaryMatrixT(NV,:) = S;  % Boundary at max volatility
+
+        % Boundary Condition when V = 0 (volatility = 0)
+        discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
+        %discountedPayoff = max((S - K), 0);
+        boundaryMatrixT(1,:) = discountedPayoff;
+
+        bm_V1 = boundaryMatrixT;
+
+        boundaryMatrix_mixed = zeros(NS, NV);
+        boundaryMatrix_mixed(NS,:) = (1 / ds);  % Neumann condition for mixed derivative
+
+        bm_SV = boundaryMatrix_mixed;
+
+        %temporary = MDerivativeVM(matrix, delta, boundaryConditionLeft, boundaryConditionRight)
+        %laplacian = MSecondDerivativePlusCVM(L, delta, boundaryConditionLeft, boundaryConditionRight)
+
+        % Compute first and second derivatives in S
+        % firstSDerivative = MDerivativeC(U, ds, 0, 1, boundaryMatrix_S);
+        % secondSDerivative = MSecondDerivativePlusC(U, ds, 0, 1, boundaryMatrix_S);
+
+
+
+
+        d1sM = MDerivativeVM(U, ds, 0, 1);
+        d2sM = MSecondDerivativePlusCVM(U, ds, 0, 1);
+        d1S = d1sM*U;
+        d2S = d2sM*U;
+        d1SB = bm_S;
+        d2SB = bm_S2;
+        %d2SB = zeros(NS,NV);
+        d1VB = bm_V1;
+        %d2VB = bm_V1;
+        d2VB = zeros(NV,NS);
+        dSVB = bm_SV;
+
+        % Compute first and second derivatives in V
+        %firstVDerivative = MDerivativeC(U', dv, 1, 1, boundaryMatrixT)';
+        %secondVDerivative = MSecondDerivativePlusC(U', dv, 1, 1, boundaryMatrixT)';
+    
+        d1vM = MDerivativeVM(U', dv, 1, 1);
+        d2vM = MSecondDerivativePlusCVM(U', dv, 1, 1);
+        %d1V = U*d1vM;
+        %d2V = U*d2vM;
+
+        % Compute mixed derivative
+        %mixedDerivative = MDerivativeC(firstVDerivative, ds, 0, 1, boundaryMatrix_mixed);
+
+        %d1mM = MDerivativeVM(d1v, ds, 0, 1);
+        %d1VS = d1sM*U*d1vM;
+
+
+        %%%%%% Debugging ancillaries start
+        boundaryMatrix_S = zeros(NS, NV);
+        boundaryMatrix_S(NS,:) = (1 / ds);  %Neumann condition at large S
+
+        %firstSDerivative = MDerivativeC(u, ds, 0, 1, zeros(NS, NV));
+        firstSDerivative = MDerivativeVM(U, ds, 0, 1)*U;
+        %secondSDerivative = MSecondDerivativePlusC(u, ds, 0, 1, zeros(NS, NV));
+        secondSDerivative = MSecondDerivativePlusCVM(U, ds, 0, 1)*U;
+        % Compute first derivative with respect to V
+        %firstVDerivative = MDerivativeC(u', dv, 1, 1, zeros(NV, NS))';  % Transposed result
+        firstVDerivative = U*MDerivativeVM(U', dv, 1, 1)';
+        IDNV = eye( NV ,'like', VMatrix );
+
+        % Compute second derivative with respect to V
+        %secondVDerivative = MSecondDerivativePlusC(u', dv, 1, 1, zeros(NV, NS))';  % Transposed result
+        secondVDerivative = U*MSecondDerivativePlusCVM(U', dv, 1, 1)';
+
+        % Compute mixed derivative
+        %boundaryMatrix_mixed = zeros(NS, NV);
+        %boundaryMatrix_mixed(NS,:) = (1 / ds);  % Neumann condition for mixed derivative
+        %mixedDerivative = MDerivativeC(firstVDerivative, ds, 0, 1, zeros(NS, NV));
+        mixedDerivative = d1sM * U * d1vM';
+
+        % Compute terms A1 to A5
+        A1o = (r - q) * SMatrix * firstSDerivative;
+        A2o = 0.5 * (S2Matrix * secondSDerivative) * VMatrix;
+        A3o = ((kappa * (theta*IDNV - VMatrix) - lambda * VMatrix) * firstVDerivative')';
+        A4o = 0.5 * sigma^2 * (secondVDerivative) * VMatrix;
+        A5o = rho * sigma * SMatrix * mixedDerivative * VMatrix;
+        %%%%%% Debugging ancillaries end
+        
+        % A1 = (r - q) * SMatrix * d1S;
+        % A2 = 0.5 * (S2Matrix * d2S) * VMatrix;
+        % A3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1V')';
+        % A4 = 0.5 * sigma^2 * (d2V) * VMatrix;
+        % A5 = rho * sigma * SMatrix * d1VS * VMatrix;
+
+        A1 = (r-q) * SMatrix * (d1sM*U);
+        B1 = (r-q) * SMatrix * d1SB;
+        A2 = 0.5 * S2Matrix*(d2sM*U)*VMatrix;
+        %B2 = 0.5 * S2Matrix * d2SB;
+        B2 = 0.5 * S2Matrix * d2SB * VMatrix;
+        %A3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1vM'*U')';
+        A3 = (U*d1vM')*((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix));
+        %A3 = U*d1vM*((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix));
+        B3 =         ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB)';
+        A4 = 0.5 * sigma^2 * U * d2vM * VMatrix;
+        B4 = 0.5 * sigma^2 * d2VB' * VMatrix;
+        mixedDerivative = d1sM * U * d1vM';
+        %mixedDerivative = d1sM * U * d1vM;
+        %A5 = rho * sigma * (SMatrix * d1sM * (U * d1vM)) * VMatrix;
+        A5 = rho * sigma * (SMatrix * mixedDerivative) * VMatrix;
+        B5 = rho * sigma * SMatrix * dSVB * VMatrix;
+
+        % Combine into matrix A
+        A = A1 + A2 + A3 + A4 + A5;
+        %Aminus = A1 + A2 + A4 + A5;
+        %AminusV = Aminus(:);
+        % Crank-Nicolson update
+        %U is size NS,NV, the vectorised form is NS*NV,1
+        U_vec = U(:);
+
+        A_vec = A(:);
+        IS = eye(NS);
+        IV = eye(NV);
+
+        % % % %Matlab kron... you need to swap i,j (cols first, then rows).
+        % % % %v suffix stands for Vectorised
+        % % % %A1v = (r-q) * SMatrix * d1sM * U;
+        % % % A1v = (r-q)*kron(IV,SMatrix*d1sM)* U_vec;
+        % % % %A2v = 0.5 * S2Matrix * d2sM*U * VMatrix;
+        % % % A2v = 0.5 * kron(VMatrix,S2Matrix*d2sM)*U_vec;
+        % % % %A3v = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1vM'*U')';
+        % % % %A3 = U*d1vM'*((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix));
+        % % % A3v = (kron((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix)* d1vM,IS)*U_vec);
+        % % % 
+        % % % %A4v = 0.5 * sigma^2 * U * d2vM * VMatrix;
+        % % % A4v = 0.5 * sigma^2 * kron(VMatrix * d2vM, IS)* U_vec;
+        % % % %A5v = rho * sigma * (SMatrix * d1sM * U * d1vM) * VMatrix;
+        % % % 
+        % % % %mixedDerivative = d1sM * U * d1vM;
+        % % % %A5 = rho * sigma * (SMatrix * d1sM * (U * d1vM)) * VMatrix;
+        % % % %A5 = rho * sigma * SMatrix * d1sM * U * d1vM * VMatrix;
+        % % % 
+        % % % 
+        % % % A5v = rho * sigma * kron(VMatrix*d1vM, SMatrix*d1sM)*U_vec;
+        % % % 
+
+        A1v = (r-q)*kron(IV,SMatrix*d1sM)* U_vec;
+        A2v = 0.5 * kron(VMatrix,S2Matrix*d2sM)*U_vec;
+        A3v = (kron((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix)* d1vM,IS)*U_vec);
+        A4v = 0.5 * sigma^2 * kron(VMatrix * d2vM, IS)* U_vec;
+        A5v = rho * sigma * kron(VMatrix*d1vM, SMatrix*d1sM)*U_vec;
+
+        B1v = (r-q) * SMatrix * d1SB;
+        B2v = 0.5 * S2Matrix * d2SB * VMatrix;
+        B3v = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB)';
+        B4v = 0.5 * sigma^2 * d2VB' * VMatrix;
+        B5v = rho * sigma * SMatrix * dSVB * VMatrix;
+
+        Av = A1v+A2v+A3v+A4v+A5v;
+
+        test1 = A1o(:)-A1v(:);
+        test2 = A2o(:)-A2v(:);
+        test3 = A3o(:)-A3v(:);
+        test4 = A4o(:)-A4v(:);
+        test5 = A5o(:)-A5v(:);
+
+        test = A_vec-Av;
+
+
+        %A_vec = A1o(:)+A2o(:)+A3o(:)+A4o(:)+A5o(:);
+
+
+        %combined_boundary_conditions = boundaryMatrix_S(:) + boundaryV(:) + boundaryMatrix_mixed(:);
+
+
+        %combined_boundary_conditions = B1+B2+B3+B4+B5;
+
+        B1v = kron(ones(NV, 1), B1(:));
+        B2v = kron(ones(NV, 1), B2(:));
+        % B3v = kron(B3(:), ones(NS, 1));
+        % B4v = kron(B4(:), ones(NS, 1));
+        % B5v = kron(B5(:), ones(NS, 1));
+
+        B3v = kron(ones(NS, 1), B3); % Size: (NS * NV, 1)
+        B4v = kron(ones(NS, 1), B4); % Size: (NS * NV, 1)
+        B5v = kron(ones(NS, 1), B5); % Size: (NS * NV, 1)
+
+        B3vv = B3v(:);
+        B4vv = B4v(:);
+        B5vv = B5v(:);
+
+        combined_boundary_conditions = B1v + B2v + B3v + B4v + B5v;        
+
+        %combined_boundary_conditions = B1+B3+B4+B5;
         
         %Kronecker product result: 13.2823
         %With zero boundaries: 13.2372!
@@ -318,11 +599,12 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         % Solve for U_vec at the next time step
         U_vec = lhs_matrix \ rhs_matrix;
         
+        %U = (1-dt*r)*U+dt*(A1+A2+A3+A4+A5);
+
         % Reshape U_vec back to the original NS x NV dimensions
         U = reshape(U_vec, [NS, NV]);
-
-    end    
 end
+
 
 function R = SVDRank(U, epsilon)
 
