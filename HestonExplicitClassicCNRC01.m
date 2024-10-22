@@ -109,8 +109,7 @@ function U = HestonExplicitClassicCNRC01(params,K,r,q,S,V,T,mode)
 
         d1sM = MDerivativeVM(U, ds, 0, 1);
         d2sM = MSecondDerivativePlusCVM(U, ds, 0, 1);
-        d1S = d1sM*U;
-        d2S = d2sM*U;
+        
         d1SB = bm_S;
         d2SB = bm_S2;
         d1VB = bm_V1;
