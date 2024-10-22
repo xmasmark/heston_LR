@@ -285,6 +285,8 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         A4v = 0.5 * sigma^2 * kron(VMatrix * d2vM, IS)* U_vec;
         A5v = rho * sigma * kron(VMatrix*d1vM, SMatrix*d1sM)*U_vec;
 
+        Av = A1v+A2v+A3v+A4v+A5v;
+
         A1k = (r-q)*kron(IV,SMatrix*d1sM);
         A2k = 0.5 * kron(VMatrix,S2Matrix*d2sM);
         A3k = (kron((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix)* d1vM,IS));
@@ -299,7 +301,6 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         B4v = 0.5 * sigma^2 * d2VB' * VMatrix;
         B5v = rho * sigma * SMatrix * dSVB * VMatrix;
 
-        Av = A1v+A2v+A3v+A4v+A5v;
         Bv = B1v(:)+B2v(:)+B3v(:)+B4v(:)+B5v(:);
 
         test1 = A1o(:)-A1v(:);
@@ -348,14 +349,17 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         % LHS and RHS matrices for Crank-Nicolson (NS*NV x NS*NV identity)
 
         %%%ROOT
-        lhs_matrix = ((1-(dt*r/2))*eye(NS*NV) + (dt/2)*AK);  
-        %lhs_matrix = ((1-(dt*r/2))*eye(NS*NV) - (dt/2)*Av);  
+        %lhs_matrix = ((1-(dt*r/2))*eye(NS*NV) + (dt/2)*AK);  
+        lhs_matrix = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*AK);  
         %%%ROOT
-        rhs_vector = ((1+(dt*r/2))*U_vec - (dt/2)*Av) - dt*Bv;
+        %rhs_vector = ((1+(dt*r/2))*U_vec - (dt/2)*Av) - dt*Bv;
+        rhs_vector = ((1-(dt*r/2))*U_vec + (dt/2)*Av) + dt*Bv;
         % Solve for U_vec at the next time step
         %%%ROOT
         U_vec_Crank_Nicolson = lhs_matrix \ rhs_vector;
         
+        %fprintf('condition at time step %d is %d\n', t, condition);
+
         %U = (1-dt*r)*U+dt*(A1+A2+A3+A4+A5);
 
         %this is in matrix form and works beautifully
@@ -364,7 +368,12 @@ function U = HestonExplicitClassicCN(params,K,r,q,S,V,T)
         %this is in vector form and works beautifully
         U_vec_Euler = (1-dt*r)*U_vec+dt*(Av + Bv);
 
-        diff = reshape(U_vec_Euler, [NS, NV]) - reshape(U_vec_Crank_Nicolson, [NS, NV]);
+        % % % % % % % if mod(t,100)==0
+        % % % % % % %     condition = cond(lhs_matrix);
+        % % % % % % %     fprintf('condition at time step %d is %d\n', t, condition);
+        % % % % % % %     diff = reshape(U_vec_Euler, [NS, NV]) - reshape(U_vec_Crank_Nicolson, [NS, NV]);
+        % % % % % % %     fprintf('The norm of the difference at time step %d is %d\n', t, norm(diff));
+        % % % % % % % end
 
         %rewrite U in terms of Kronecker versions of A and B. Also, U
         %will be the U(:) version. Make it work.
