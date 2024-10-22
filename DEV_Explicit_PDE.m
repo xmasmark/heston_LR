@@ -102,11 +102,16 @@ UvTildaPlus = HestonExplicitLowRankRTildaPlus(params,K,r,q,S,V,T,epsilon);
 UvTildaPlusGMRES = HestonExplicitLowRankRTildaPlusGMRES(params,K,r,q,S,V,T,epsilon);
 
 %HestonExplicitClassic(params,K,r,q,S,V,T)
-UvHEClassic = HestonExplicitClassic(params,K,r,q,Sm,Vm,T);
+UvHEClassicEuler = HestonExplicitClassic(params,K,r,q,Sm,Vm,T);
+UvHEClassicEulerIntegrated = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,0);
 
-UvHEClassicCN = HestonExplicitClassicCN(params,K,r,q,Sm,Vm,T);
+%HestonExplicitClassicCNRC01
+%UvHEClassicCN = HestonExplicitClassicCN(params,K,r,q,Sm,Vm,T);
+UvHEClassicCN = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,1);
 
-UvHEClassicCNGMRS = HestonExplicitClassicCN_GMRS(params,K,r,q,Sm,Vm,T);
+%UvHEClassicCNGMRS = HestonExplicitClassicCN_GMRS(params,K,r,q,Sm,Vm,T);
+UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,2);
+
 
 % Obtain the price by 2-D interpolation
 S0 = 101.52;
@@ -129,7 +134,8 @@ UvHestonCNPrice = interp2(V,S,UCN,V0,S0);
 UniformPriceTildaPlus = interp2(V,S,UvTildaPlus,V0,S0);
 UniformPriceTildaPlusGMRES = interp2(V,S,UvTildaPlusGMRES,V0,S0);
 
-UniformPriceHEClassic = interp2(Vm,Sm,UvHEClassic,V0,S0);
+UniformPriceHEClassicEuler = interp2(Vm,Sm,UvHEClassicEuler,V0,S0);
+UniformPriceHEClassicEulerIntegrated = interp2(Vm,Sm,UvHEClassicEulerIntegrated,V0,S0);
 
 UniformPriceHEClassicCN = interp2(Vm,Sm,UvHEClassicCN,V0,S0);
 
@@ -174,7 +180,8 @@ UVTildaPlusErrorGMRES = UniformPriceTildaPlusGMRES - ClosedPrice;
 %UVTildaError3 = UniformPriceTilda3 - ClosedPrice;
 UvHestonEulerError = UvHestonEulerPrice - ClosedPrice;
 UvHestonCNError = UvHestonCNPrice - ClosedPrice;
-UvHEClassicError = UniformPriceHEClassic - ClosedPrice;
+UvHEClassicEulerError = UniformPriceHEClassicEuler - ClosedPrice;
+UvHEClassicEulerIntegratedError = UniformPriceHEClassicEulerIntegrated - ClosedPrice;
 UvHEClassicCNError = UniformPriceHEClassicCN - ClosedPrice;
 UvHEClassicCNGMRSError = UniformPriceHEClassicCNGMRS - ClosedPrice;
 
@@ -187,18 +194,19 @@ fprintf('Number of time steps   %5.0f\n', nT)
 fprintf('------------------------------------------\n')
 fprintf('Method                Price   DollarError \n')
 fprintf('------------------------------------------\n')
-fprintf('Closed Form            %10.4f         \n', ClosedPrice)
+fprintf('Closed Form                      %10.4f         \n', ClosedPrice)
 % fprintf('Uniform Grid Book %10.4f    %5.2f\n', UniformPrice,UError)
 % fprintf('Non-Uniform Grid  %10.4f    %5.2f\n', NonUniformPrice,NError)
 % fprintf('Marco Heston Algo %10.4f    %5.2f\n', UniformPriceLC,MError)
 % fprintf('Marco Heston LR   %10.4f    %5.2f\n', UniformPriceLowRank,LRError)
-fprintf('Marco Heston UVT       %10.4f    %5.2f\n', UniformPriceTilda,UVTildaError)
-fprintf('Marco Heston UVT Plus  %10.4f    %5.2f\n', UniformPriceTildaPlus,UVTildaPlusError)
-fprintf('Marco Heston UVT GMRES %10.4f    %5.2f\n', UniformPriceTildaPlusGMRES,UVTildaPlusErrorGMRES)
+fprintf('Marco Heston UVT                 %10.4f    %5.2f\n', UniformPriceTilda,UVTildaError)
+fprintf('Marco Heston UVT Plus            %10.4f    %5.2f\n', UniformPriceTildaPlus,UVTildaPlusError)
+fprintf('Marco Heston UVT GMRES           %10.4f    %5.2f\n', UniformPriceTildaPlusGMRES,UVTildaPlusErrorGMRES)
 % fprintf('Marco Heston UVT3 %10.4f    %5.2f\n', UniformPriceTilda3,UVTildaError3)
-fprintf('Marco Heston Euler     %10.4f    %5.2f\n', UvHestonEulerPrice,UvHestonEulerError)
+fprintf('Marco Heston Euler               %10.4f    %5.2f\n', UvHestonEulerPrice,UvHestonEulerError)
 %fprintf('Marco Heston CN        %10.4f    %5.2f\n', UvHestonCNPrice,UvHestonCNError)
-fprintf('Heston Classic         %10.4f    %5.2f\n', UniformPriceHEClassic,UvHEClassicError)
-fprintf('Heston Classic CN      %10.4f    %5.2f\n', UniformPriceHEClassicCN,UvHEClassicCNError)
-fprintf('Heston Classic CN GMRS %10.4f    %5.2f\n', UniformPriceHEClassicCNGMRS,UvHEClassicCNGMRSError)
+fprintf('Heston Classic Euler             %10.4f    %5.2f\n', UniformPriceHEClassicEuler,UvHEClassicEulerError)
+fprintf('Heston Classic Euler Integrated  %10.4f    %5.2f\n', UniformPriceHEClassicEulerIntegrated,UvHEClassicEulerIntegratedError)
+fprintf('Heston Classic CN                %10.4f    %5.2f\n', UniformPriceHEClassicCN,UvHEClassicCNError)
+fprintf('Heston Classic CN GMRS           %10.4f    %5.2f\n', UniformPriceHEClassicCNGMRS,UvHEClassicCNGMRSError)
 fprintf('------------------------------------------\n')
