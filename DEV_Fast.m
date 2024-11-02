@@ -113,7 +113,7 @@ epsilon = 0.00001;
 %UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,2);
 
 
-UvHEClassicCNXYdev = HestonExplicitClassicCNXYdev(params,K,r,q,Sm,Vm,T,2);
+UvHEClassicCNXYdev = HestonExplicitClassicCNXYRC01(params,K,r,q,Sm,Vm,T,2);
 
 % Obtain the price by 2-D interpolation
 S0 = 101.52;

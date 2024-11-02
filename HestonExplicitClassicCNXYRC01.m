@@ -1,4 +1,4 @@
-function U = HestonExplicitClassicCNXYdev(params,K,r,q,S,V,T,mode)
+function U = HestonExplicitClassicCNXYRC01(params,K,r,q,S,V,T,mode)
 
     %mode is to decide the system resolution:
     %0--> Euler
@@ -70,11 +70,6 @@ function U = HestonExplicitClassicCNXYdev(params,K,r,q,S,V,T,mode)
 	    Y(v)=1;
     end
     
-    %vectorised U = X*Y' where apostrophe is 
-    %the sign for transposition (column to row).
-    
-    % test = U-X*Y';
-
     SMatrix = diag(S);
     S2Matrix = diag(S.^2);
     VMatrix = diag(V);
@@ -115,8 +110,8 @@ function U = HestonExplicitClassicCNXYdev(params,K,r,q,S,V,T,mode)
 
         bm_V1 = boundaryMatrixT;
 
-        b3x = [discountedPayoff', S'];%also in this case rank 2
-        b3y = zeros(NV,2); %2 because this is rank 2
+        b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
+        b3y = zeros(NV,2); %2 columns because this is rank 2
         b3y(1,1)=1;
         b3y(NV,2)=1;
 
@@ -128,15 +123,6 @@ function U = HestonExplicitClassicCNXYdev(params,K,r,q,S,V,T,mode)
         d1sM = MDerivativeVM(U, ds, 0, 1);
         d2sM = MSecondDerivativePlusCVM(U, ds, 0, 1);
         
-        d1SB = bm_S;
-        d2SB = bm_S2;
-        d1VB = bm_V1;
-        d2VB = zeros(NV,NS);
-        dSVB = bm_SV;
-
-        b4x = zeros(NS,1);
-        b4y = zeros(NV,1);
-
         b5x = zeros(NS,1);
         b5x(NS)=(1/ds);
         b5y = ones(NV,1);
@@ -148,17 +134,6 @@ function U = HestonExplicitClassicCNXYdev(params,K,r,q,S,V,T,mode)
 
         IS = eye(NS);
         IV = eye(NV);
-
-        %U is size NS,NV, the vectorised form is NS*NV,1
-        % U_vec = U(:);
-
-        %the following part needs to be split between the X and Y part
-        %and this will remove the expensive Kronecker product
-        % A1k = (r-q)*kron(IV,SMatrix*d1sM);
-        % A2k = 0.5 * kron(VMatrix,S2Matrix*d2sM);
-        % A3k = (kron((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix)* d1vM,IS));
-        % A4k = 0.5 * sigma^2 * kron(VMatrix * d2vM, IS);
-        % A5k = rho * sigma * kron(VMatrix*d1vM, SMatrix*d1sM);
 
         A1KX = (r-q)*SMatrix*d1sM;
         A1KY = IV;
@@ -172,29 +147,23 @@ function U = HestonExplicitClassicCNXYdev(params,K,r,q,S,V,T,mode)
         A5KY = rho * sigma * (VMatrix*d1vM);
 
         X1 = A1KX*x;
-        Y1 = A1KY'*y;
+        Y1 = A1KY*y;
         X2 = A2KX*x;
-        Y2 = A2KY'*y;
+        Y2 = A2KY*y;
         X3 = A3KX*x;
-        Y3 = A3KY'*y;
+        Y3 = A3KY*y;
         X4 = A4KX*x;
-        Y4 = A4KY'*y;
+        Y4 = A4KY*y;
         X5 = A5KX*x;
-        Y5 = A5KY'*y;
+        Y5 = A5KY*y;
 
-        % B1 = (r-q) * SMatrix * d1SB;
-        % B2 = 0.5 * S2Matrix * d2SB * VMatrix;
-        % B3 = ((kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix) * d1VB)';
-        % B4 = 0.5 * sigma^2 * d2VB' * VMatrix;
-        % B5 = rho * sigma * SMatrix * dSVB * VMatrix;
-        
         b1x = (r-q) * SMatrix * b1x;
         b2x = 0.5 * S2Matrix * b2x;
         b2y = VMatrix'*b2y;
         b3y = (kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix)' * b3y;
-        %b4y = (0.5 * sigma^2 * d2VB' * VMatrix)*b4y;
-        %b4y = (0.5 * sigma^2 *(b4y*b4x')' * VMatrix);
-        %b4y = (0.5 * sigma^2*b4x*b4y'*VMatrix);
+        b4x = zeros(NS,1);
+        b4y = zeros(NV,1);
+        
         b4y = 0.5 * sigma^2*VMatrix'*b4y;
         b5x = rho * sigma * SMatrix * b5x;
         b5y = VMatrix'*b5y;
@@ -211,12 +180,9 @@ function U = HestonExplicitClassicCNXYdev(params,K,r,q,S,V,T,mode)
         newX = [cs*x XC];
         newY = [cs*y YC];
 
-        fprintf('condition at time step %d is %d\n', t, condition);
+        %fprintf('rank of XC is %d\n', rank(XC));
 
         [X,Y]=CompressData(newX,newY,epsilon);
-
-
-
 
 
         % % % % %%%OLD CODE STARTS
