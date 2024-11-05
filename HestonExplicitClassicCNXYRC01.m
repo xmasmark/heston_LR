@@ -168,6 +168,10 @@ function U = HestonExplicitClassicCNXYRC01(params,K,r,q,S,V,T,mode)
         b5x = rho * sigma * SMatrix * b5x;
         b5y = VMatrix'*b5y;
 
+        AKX = [A1KX, A2KX, A3KX, A4KX, A5KX];
+        AKY = [A1KY, A2KY, A3KY, A4KY, A5KY];
+        %AK = kron(AKY, AKX);
+
         % % % %     U_vec = (1-dt*r)*U_vec+dt*(Av + Bv);
 
         dtsrt = sqrt(dt);
@@ -180,9 +184,35 @@ function U = HestonExplicitClassicCNXYRC01(params,K,r,q,S,V,T,mode)
         newX = [cs*x XC];
         newY = [cs*y YC];
 
+        
+
+        % Set GMRES parameters
+        restart = 80;  % Restart after 20 iterations (example value)
+        tol = 1e-5;  % Tolerance for convergence
+        max_iter = 100;  % Maximum number of iterations
+
+        x0=zeros(NS,size(AKX,2));
+        y0=zeros(NV,size(AKY,2));
+
+        [X_new, Y_new] = GMRES_XYv01(AKX, AKY, x0, y0, restart, tol, max_iter);
+
+        [X,Y]=CompressData(X_new, Y_new,epsilon);
+
+
         %fprintf('rank of XC is %d\n', rank(XC));
 
-        [X,Y]=CompressData(newX,newY,epsilon);
+        %[X,Y]=CompressData(newX,newY,epsilon);
+
+        
+
+        %%%Comment:
+        %%%before this step I need to plug in an efficient GMRES
+        %%%implementation
+
+        % % % % lhs_matrix = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*AK);  
+        % % % % rhs_vector = ((1-(dt*r/2))*U_vec + (dt/2)*Av) + dt*Bv;
+        % AK in low rank format: AKx*Aky'
+        % AV in low rank format: 
 
 
         % % % % %%%OLD CODE STARTS
