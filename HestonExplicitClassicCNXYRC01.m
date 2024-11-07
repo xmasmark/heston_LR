@@ -168,21 +168,25 @@ function U = HestonExplicitClassicCNXYRC01(params,K,r,q,S,V,T,mode)
         b5x = rho * sigma * SMatrix * b5x;
         b5y = VMatrix'*b5y;
 
-        AKX = [A1KX, A2KX, A3KX, A4KX, A5KX];
-        AKY = [A1KY, A2KY, A3KY, A4KY, A5KY];
-        %AK = kron(AKY, AKX);
+        % AKX = [A1KX, A2KX, A3KX, A4KX, A5KX];
+        % AKY = [A1KY, A2KY, A3KY, A4KY, A5KY];
+        AX = [X1, X2, X3, X4, X5];
+        AY = [Y1, Y2, Y3, Y4, Y5];
+
 
         % % % %     U_vec = (1-dt*r)*U_vec+dt*(Av + Bv);
 
-        dtsrt = sqrt(dt);
 
-        XC = dtsrt*[X1,X2,X3,X4,X5,b1x,b2x,b3x,b4x,b5x];
-        YC = dtsrt*[Y1,Y2,Y3,Y4,Y5,b1y,b2y,b3y,b4y,b5y];
-
-        cs = sqrt((1-dt*r));
-
-        newX = [cs*x XC];
-        newY = [cs*y YC];
+        % % the following applies in the case of Euler
+        % % dtsrt = sqrt(dt);
+        % % 
+        % % XC = dtsrt*[X1,X2,X3,X4,X5,b1x,b2x,b3x,b4x,b5x];
+        % % YC = dtsrt*[Y1,Y2,Y3,Y4,Y5,b1y,b2y,b3y,b4y,b5y];
+        % % 
+        % % cs = sqrt((1-dt*r));
+        % % 
+        % % newX = [cs*x XC];
+        % % newY = [cs*y YC];
 
         
 
@@ -191,10 +195,14 @@ function U = HestonExplicitClassicCNXYRC01(params,K,r,q,S,V,T,mode)
         tol = 1e-5;  % Tolerance for convergence
         max_iter = 100;  % Maximum number of iterations
 
-        x0=zeros(NS,size(AKX,2));
-        y0=zeros(NV,size(AKY,2));
+        % x0=zeros(NS,size(AKX,2));
+        % y0=zeros(NV,size(AKY,2));
+        x0=zeros(NS,size(AX,2));
+        y0=zeros(NV,size(AY,2));
+        % x0=zeros(NS,NS);
+        % y0=zeros(NV,NV);
 
-        [X_new, Y_new] = GMRES_XYv01(AKX, AKY, x0, y0, restart, tol, max_iter);
+        [X_new, Y_new] = GMRES_XYv01(AX, AY, x0, y0, restart, tol, max_iter);
 
         [X,Y]=CompressData(X_new, Y_new,epsilon);
 

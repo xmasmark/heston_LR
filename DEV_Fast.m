@@ -1,6 +1,9 @@
 % Illustration of pricing using uniform and non-uniform grids
 clc; clear;
 
+% restoredefaultpath
+% rehash toolboxcache
+
 % Strike price, risk free rate, dividend yield, and maturity
 K = 100;
 r = 0.02;
