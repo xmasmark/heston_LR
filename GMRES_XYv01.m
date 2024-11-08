@@ -49,17 +49,32 @@ function [X_new, Y_new] = GMRES_XYv01(AKX, AKY, x0, y0, restart, tol, max_iter)
         
         % Check total residual across rank components
         residual = sum(arrayfun(@(k) norm(V_X(:, 1, k), 'fro') * norm(V_Y(:, 1, k), 'fro'), 1:r));
+        [num_rows, ~] = size(H(:, :, k));  % Dynamically get the number of rows of H
+        residual_vector = norm(V_X(:, 1, k), 'fro') * norm(V_Y(:, 1, k), 'fro') * ones(num_rows, 1);
 
         % Arnoldi process to build Krylov subspace
         for j = 1:restart
             for k = 1:r
                 % Apply the operators AKX and AKY on each rank component
-                w_X = AKX * V_X(:, j, k);
-                w_Y = AKY * V_Y(:, j, k);
+                %PROBLEM HERE:
+                %AKX is (NS,r) and V_X(:,j,k) is (NS,1) so the product
+                %between the two cannot work
+                w_X = AKX .* V_X(:, j, k);
+                w_Y = AKY .* V_Y(:, j, k);
+
+
+
+                % w_X = AKX' * V_X(:, j, k);
+                % w_Y = AKY' * V_Y(:, j, k);
+
 
                 % Orthogonalize w against previous V's
                 for i = 1:j
-                    H(i, j, k) = V_X(:, i, k)' * w_X + V_Y(:, i, k)' * w_Y;
+                    %H(i, j, k) = V_X(:, i, k)' * w_X + V_Y(:, i, k)' * w_Y;
+                    %H(i, j, k) = sum(V_X(:, i, k) .* w_X) + sum(V_Y(:, i, k) .* w_Y);
+                    % H(i, j, k) = dot(V_X(:, i, k), w_X) + dot(V_Y(:, i, k), w_Y);
+                    H(i, j, k) = sum(sum(V_X(:, i, k) .* w_X) + sum(V_Y(:, i, k) .* w_Y));
+
                     w_X = w_X - H(i, j, k) * V_X(:, i, k);
                     w_Y = w_Y - H(i, j, k) * V_Y(:, i, k);
                 end
@@ -77,7 +92,7 @@ function [X_new, Y_new] = GMRES_XYv01(AKX, AKY, x0, y0, restart, tol, max_iter)
 
         % Solve least-squares problem for updating X and Y for each rank component
         for k = 1:r
-            y_k = H(:, :, k) \ residual; % Solve H*y = residual for each rank component
+            y_k = H(:, :, k) \ residual_vector; % Solve H*y = residual for each rank component
             X_update = V_X(:, 1:j, k) * y_k(1:j); % Update for X
             Y_update = V_Y(:, 1:j, k) * y_k(1:j); % Update for Y
 
