@@ -28,7 +28,6 @@ function [X_new, Y_new] = GMRES_XYv01(BX, BY, x0, y0, restart, tol, max_iter)
         for k = 1:r
             %residual = right hand side - matrix*solution
             % r = BX*BY'-X_new*Y_new'
-            % X_new and Y_new need to be passed to MatVec
             AX_new = BX(:, k) * X_new(:, k)';  % Adjusting to element-wise multiplication
             AY_new = BY(:, k) * Y_new(:, k)';  % Adjusting to element-wise multiplication
 
