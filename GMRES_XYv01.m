@@ -1,5 +1,5 @@
 function [X_new, Y_new] = GMRES_XYv01(AKX, AKY, x0, y0, restart, tol, max_iter)
-    % Custom GMRES routine adapted for low-rank factors
+   % Custom GMRES routine adapted for low-rank factors
     % Inputs:
     %   AKX, AKY - operators for low-rank approximation
     %   x0, y0   - Initial guesses for the low-rank factors X and Y
@@ -14,6 +14,9 @@ function [X_new, Y_new] = GMRES_XYv01(AKX, AKY, x0, y0, restart, tol, max_iter)
     iter = 0; % Initialize iteration count
     r = size(X_new, 2); % rank
     
+    % Small threshold to avoid near-zero division issues
+    small_thresh = eps;  
+    
     % Loop until convergence or maximum iterations
     while residual > tol && iter < max_iter
         % Initialize Krylov subspace for each rank component
@@ -26,24 +29,27 @@ function [X_new, Y_new] = GMRES_XYv01(AKX, AKY, x0, y0, restart, tol, max_iter)
             AX_new = AKX(:, k) .* X_new(:, k);  % Adjusting to element-wise multiplication
             AY_new = AKY(:, k) .* Y_new(:, k);  % Adjusting to element-wise multiplication
 
+            % if any(isnan(AX_new)) || any(isnan(AY_new))
+            %     error('NaN values detected in AX_new or AY_new at component %d', k);
+            % end
+            % if any(isinf(AX_new)) || any(isinf(AY_new))
+            %     error('Inf values detected in AX_new or AY_new at component %d', k);
+            % end
+            
             residual_X = x0(:, k) - AX_new;
             residual_Y = y0(:, k) - AY_new;
-            residual_k = norm(residual_X, 'fro') * norm(residual_Y, 'fro');
-
-            % Normalize initial residual
-            if norm(residual_X, 'fro') ~= 0
-                V_X(:, 1, k) = residual_X / norm(residual_X, 'fro');
-            else
-                V_X(:, 1, k) = 0;
-            end
-            if norm(residual_Y, 'fro') ~= 0
-                V_Y(:, 1, k) = residual_Y / norm(residual_Y, 'fro');
-            else
-                V_Y(:, 1, k) = 0;
-            end
+            
+            % Normalised residual with small threshold checks to avoid
+            % division by zero
+            norm_residual_X = max(norm(residual_X, 'fro'), small_thresh);
+            norm_residual_Y = max(norm(residual_Y, 'fro'), small_thresh);
+            
+            % Normalised initial residual, avoiding division by zero
+            V_X(:, 1, k) = residual_X / norm_residual_X;
+            V_Y(:, 1, k) = residual_Y / norm_residual_Y;
         end
         
-        % Check total residual across rank components
+        % Total residual across rank components - Frobenious norm
         residual = sum(arrayfun(@(k) norm(V_X(:, 1, k), 'fro') * norm(V_Y(:, 1, k), 'fro'), 1:r));
         residual_vector = residual * ones(restart + 1, 1);  % Adjusting residual vector size
 
@@ -53,6 +59,14 @@ function [X_new, Y_new] = GMRES_XYv01(AKX, AKY, x0, y0, restart, tol, max_iter)
                 % Apply the operators AKX and AKY on each rank component
                 w_X = AKX(:, k) .* V_X(:, j, k);  % Adjusted element-wise multiplication
                 w_Y = AKY(:, k) .* V_Y(:, j, k);  % Adjusted element-wise multiplication
+                
+                % % % % Debug check for NaN or Inf after w_X and w_Y calculations
+                % % % if any(isnan(w_X)) || any(isnan(w_Y))
+                % % %     error('NaN values detected in w_X or w_Y at component %d, iteration %d', k, j);
+                % % % end
+                % % % if any(isinf(w_X)) || any(isinf(w_Y))
+                % % %     error('Inf values detected in w_X or w_Y at component %d, iteration %d', k, j);
+                % % % end
 
                 % Orthogonalize w against previous V's
                 for i = 1:j
@@ -61,14 +75,14 @@ function [X_new, Y_new] = GMRES_XYv01(AKX, AKY, x0, y0, restart, tol, max_iter)
                     w_X = w_X - H(i, j, k) * V_X(:, i, k);
                     w_Y = w_Y - H(i, j, k) * V_Y(:, i, k);
                 end
-                H(j + 1, j, k) = norm(w_X, 'fro') * norm(w_Y, 'fro');
+                H(j + 1, j, k) = max(norm(w_X, 'fro') * norm(w_Y, 'fro'), small_thresh);
 
-                % Normalize and add new basis vectors if H(j+1, j) is not zero
+                % Normalize and add new basis vectors if H(j+1, j) is above the threshold
                 if H(j + 1, j, k) > tol
                     V_X(:, j + 1, k) = w_X / norm(w_X, 'fro');
                     V_Y(:, j + 1, k) = w_Y / norm(w_Y, 'fro');
                 else
-                    break;
+                    break;  % Skip normalization if the norm is too small
                 end
             end
         end
@@ -93,8 +107,6 @@ function [X_new, Y_new] = GMRES_XYv01(AKX, AKY, x0, y0, restart, tol, max_iter)
         end
     end
 end
-
-
 
 
 % % % function [X_new, Y_new] = GMRES_XYv01(AKX, AKY, x0, y0, restart, tol, max_iter)
