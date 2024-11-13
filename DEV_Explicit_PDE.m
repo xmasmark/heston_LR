@@ -113,7 +113,9 @@ UvHEClassicCN = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,1);
 UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,2);
 
 
-UvHEClassicCNXYdev = HestonExplicitClassicCNXYdev(params,K,r,q,Sm,Vm,T,2);
+% UvHEClassicCNXYdev = HestonExplicitClassicCNXYdev(params,K,r,q,Sm,Vm,T,2);
+UvHEClassicCNXYdev = HestonExplicitClassicXYEuler(params,K,r,q,Sm,Vm,T,2);
+
 
 % Obtain the price by 2-D interpolation
 S0 = 101.52;
