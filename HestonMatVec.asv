@@ -1,4 +1,4 @@
-function [xl,yl] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho)
+function [xl,yl] = HestonMatVec(x,y, NS, NV, ds, dv, S, V)
     %make sure this works -- pass additional parameters like ds, dt, dv,
     %NS, NV, S, V, K, Tmax, T...
     %also, create independent functions for each method call...
@@ -57,8 +57,8 @@ function [xl,yl] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, l
 
     % Compute first and second derivatives in V
 
-    d1vM = MDerivativeVM(NV, dv, 1, 1);
-    d2vM = MSecondDerivativePlusCVM(NV, dv, 1, 1);
+    d1vM = MDerivativeVM(U', dv, 1, 1);
+    d2vM = MSecondDerivativePlusCVM(U', dv, 1, 1);
 
     IS = eye(NS);
     IV = eye(NV);

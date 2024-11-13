@@ -173,6 +173,10 @@ function U = HestonExplicitClassicCNXYRC01(params,K,r,q,S,V,T,mode)
         AX = [X1, X2, X3, X4, X5];
         AY = [Y1, Y2, Y3, Y4, Y5];
 
+        % [xl,yl] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+
+        % diffx = AX-xl;
+        % diffy = AY-yl;
 
         % % % %     U_vec = (1-dt*r)*U_vec+dt*(Av + Bv);
 
