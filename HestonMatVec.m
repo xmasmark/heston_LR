@@ -8,55 +8,9 @@ function [xl,yl] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, l
     S2Matrix = diag(S.^2);
     VMatrix = diag(V);
 
-    % boundaryMatrix_S = zeros(NS, NV);
-    % boundaryMatrix_S(NS,:) = (1/ds);  %Neumann condition at large S
-    % 
-    % bm_S=boundaryMatrix_S;
-    % 
-    % b1x = zeros(NS,1);
-    % b1x(NS)=(1/ds);
-    % b1y = ones(NV,1);
-
-
-    % boundaryMatrix_S2 = zeros(NS, NV);
-    % boundaryMatrix_S2(NS,:) = (1/ds);  %Neumann condition at large S
-
-    % bm_S2=boundaryMatrix_S2;
-    % 
-    % b2x = zeros(NS,1);
-    % b2x(NS)=(1/ds);
-    % b2y = ones(NV,1);
-    
-    % boundaryMatrix_V = zeros(NS, NV);
-    % boundaryMatrixT = boundaryMatrix_V';  % Transpose for volatility derivatives
-    % boundaryMatrixT(NV,:) = S;  % Boundary at max volatility
-
-    % Boundary Condition when V = 0 (volatility = 0)
-    % discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
-    %discountedPayoff = max((S - K), 0);
-    % boundaryMatrixT(1,:) = discountedPayoff;
-
-    % bm_V1 = boundaryMatrixT;
-    % 
-    % b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
-    % b3y = zeros(NV,2); %2 columns because this is rank 2
-    % b3y(1,1)=1;
-    % b3y(NV,2)=1;
-
-    % boundaryMatrix_mixed = zeros(NS, NV);
-    % boundaryMatrix_mixed(NS,:) = (1 / ds);  % Neumann condition for mixed derivative
-
-    % bm_SV = boundaryMatrix_mixed;
-
     d1sM = MDerivativeVM(NS, ds, 0, 1);
     d2sM = MSecondDerivativePlusCVM(NS, ds, 0, 1);
     
-    % b5x = zeros(NS,1);
-    % b5x(NS)=(1/ds);
-    % b5y = ones(NV,1);
-
-    % Compute first and second derivatives in V
-
     d1vM = MDerivativeVM(NV, dv, 1, 1);
     d2vM = MSecondDerivativePlusCVM(NV, dv, 1, 1);
 
