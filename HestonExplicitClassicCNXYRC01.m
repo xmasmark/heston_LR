@@ -220,7 +220,8 @@ function U = HestonExplicitClassicCNXYRC01(params,K,r,q,S,V,T,mode)
 
         [BXc,BYc]=CompressData(BX, BY, epsilon);
 
-        [X_new, Y_new] = GMRES_XYv01(BXc, BYc, x, y, restart, tol, max_iter);
+        % [X_new, Y_new] = GMRES_XYv01(BXc, BYc, x, y, restart, tol, max_iter);
+        [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter)
         %[X_new, Y_new] = GMRES_XYv01(AX, AY, XC, YC, restart, tol, max_iter);
 
         [X,Y]=CompressData(X_new, Y_new,epsilon);

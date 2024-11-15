@@ -1,4 +1,10 @@
-function [X_new, Y_new] = GMRES_XYv01(BX, BY, x0, y0, restart, tol, max_iter)
+function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter)
+
+
+    %[BX,BY] = HestonMatVecBoundaries    (NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T)
+    %function [xl,yl] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho)
+
+
    % Custom GMRES routine adapted for low-rank factors
     % Inputs:
     %   AKX, AKY - operators for low-rank approximation
