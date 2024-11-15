@@ -22,7 +22,19 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
     
     % Small threshold to avoid near-zero division issues
     small_thresh = eps;  
+
+    %r = b - A * x; x is replaced by X0 and Y0 
+    %x is x0, y0
+    %A*x is [xl,yl] = HestonMatVec(x0, y0, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho)
+    %b is bx*by
+    %r = BX*BY-xl*yl;
+    %r is needed in low rank format
+    %r = rx*ry;
+    %r = BX*BY-xl*yl;
+    %the factors need to be stacked-- [BX,+xl]*[BY,-yl] -- these are
+    %stacked
     
+
     % Loop until convergence or maximum iterations
     while residual > tol && iter < max_iter
         % Initialize Krylov subspace for each rank component

@@ -91,8 +91,8 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
         % BX = [(1+r*dt/2)*x, (-dt/2)*AX,b1x,b2x,b3x,b4x,b5x];
         % BY = [           y,         AY,b1y,b2y,b3y,b4y,b5y];
 
-        FX = [(1+r*dt/2)*x, (-dt/2)*AX,BX];
-        FY = [           y,         AY,BY];
+        FX = [(1+r*dt/2)*x, (-dt/2)*AX, BX]; %half Euler step
+        FY = [           y,         AY, BY];
 
         [BXc,BYc]=CompressData(FX, FY, epsilon);
 
