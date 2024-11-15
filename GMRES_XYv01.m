@@ -16,12 +16,12 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
     % Initialize solution and residual
     X_new = x0;
     Y_new = y0;
-    residual = tol + 1; % Initial residual to enter loop
-    iter = 0; % Initialize iteration count
+    % residual = tol + 1; % Initial residual to enter loop
+    % iter = 0; % Initialize iteration count
     r = size(X_new, 2); % rank
     
     % Small threshold to avoid near-zero division issues
-    small_thresh = eps;  
+    % small_thresh = eps;  
 
     %r = b - A * x; x is replaced by X0 and Y0 
     %x is x0, y0
@@ -33,312 +33,168 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
     %r = BX*BY-xl*yl;
     %the factors need to be stacked-- [BX,+xl]*[BY,-yl] -- these are
     %stacked
+    [xl,yl] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+    r = BX*BY' - xl*yl'; %%b-A*X 
+
+    first = [BX,xl];
+    second = [BY,-yl];
+
+    altR = first*second';
+    beta = norm(r);
+
+    for iter = 1:max_iter
+        % [Q,H]= arnoldi_processXY(xl*yl', r, restart);
+        %%[Q,H]= arnoldi_processXY(xl*yl', r(:), restart);
+        [Q,H]= arnoldi_process_XY_I(xl*yl', r, restart);
+        e1 = zeros(restart+1,1);
+        e1(1)=beta;
+        [Q2,R]=qr(H,0);
+        y = R\(Q2'*e1);
+        x = x+Q(:,1:restart)*y;
+        r = b-A*x;
+        beta = norm(r);
+
+        if beta<tol
+            break;
+        end
+    end
+
+    % % n = length(b);
+    % % x = x0;
+    % % r = b - A * x;
+    % % beta = norm(r);
+    % % 
+    % % for iter = 1:max_iter
+    % %     [Q, H] = arnoldi_process(A, r, restart);
+    % %     e1 = zeros(restart+1, 1);
+    % %     e1(1) = beta;
+    % % 
+    % %     % Solve the least squares problem
+    % %     %y = H \ e1; %this goes hysterical because of the sparsity
+    % % 
+    % %     [Q2, R] = qr(H,0);
+    % %     y = R \ (Q2'*e1);
+    % % 
+    % %     x = x + Q(:, 1:restart) * y;
+    % %     r = b - A * x;
+    % %     beta = norm(r);
+    % % 
+    % %     if beta < tol
+    % %         break;
+    % %     end
+    % % end
+
+
+
+    
     
 
-    % Loop until convergence or maximum iterations
-    while residual > tol && iter < max_iter
-        % Initialize Krylov subspace for each rank component
-        V_X = zeros(size(X_new, 1), restart, r);
-        V_Y = zeros(size(Y_new, 1), restart, r);
-        H = zeros(restart + 1, restart, r);
+end
 
-        % Calculate initial residual and its norm for each rank component
-        for k = 1:r
-            %residual = right hand side - matrix*solution
-            % r = BX*BY'-X_new*Y_new'
-            % X_new and Y_new need to be passed to MatVec
-            AX_new = BX(:, k) * X_new(:, k)';  % Adjusting to element-wise multiplication
-            AY_new = BY(:, k) * Y_new(:, k)';  % Adjusting to element-wise multiplication
 
-            % if any(isnan(AX_new)) || any(isnan(AY_new))
-            %     error('NaN values detected in AX_new or AY_new at component %d', k);
-            % end
-            % if any(isinf(AX_new)) || any(isinf(AY_new))
-            %     error('Inf values detected in AX_new or AY_new at component %d', k);
-            % end
-            
-            residual_X = x0(:, k) - AX_new;
-            residual_Y = y0(:, k) - AY_new;
-            
-            % Normalised residual with small threshold checks to avoid
-            % division by zero
-            norm_residual_X = max(norm(residual_X, 'fro'), small_thresh);
-            norm_residual_Y = max(norm(residual_Y, 'fro'), small_thresh);
-            
-            % Normalised initial residual, avoiding division by zero
-            V_X(:, 1, k) = residual_X / norm_residual_X;
-            V_Y(:, 1, k) = residual_Y / norm_residual_Y;
+function [Q, H] = arnoldi_processXY(A, q, restart)
+    %as per definition, this implements the Arnoldi Process
+    %meaning the matrix A, large and in this case sparse
+    %is reduced to a Hessemberg matrix H with an orthonormal basis
+    %Q for the Krylov subspace
+    %please note that the Hessemberg matrix can be in upper or lower form
+    %upper: a(i,j)~=0 for i,j with i>j+1;
+    %lower: a(i,j)~=0 for i,j with j>i+1;
+    %in both definitions, the +1 qualifies the defition that the Hessemberg
+    %matrix is "almost" triangular.
+    %REMEMBER that: AQ approx QH and this is an important proprerty that
+    %makes this decomposition valuable in iterative algorithms.
+
+    n = length(q);
+    H = zeros(restart+1, restart);
+    Q = zeros(n, restart+1);
+    Q(:, 1) = q / norm(q);
+    
+    for k = 1:restart
+        y = A * Q(:, k);
+        for j = 1:k
+            H(j, k) = Q(:, j)' * y;
+            y = y - H(j, k) * Q(:, j);
         end
-        
-        % Total residual across rank components - Frobenious norm
-        residual = sum(arrayfun(@(k) norm(V_X(:, 1, k), 'fro') * norm(V_Y(:, 1, k), 'fro'), 1:r));
-        residual_vector = residual * ones(restart + 1, 1);  % Adjusting residual vector size
-
-        % Arnoldi process to build Krylov subspace
-        for j = 1:restart
-            for k = 1:r
-                % Apply the operators AKX and AKY on each rank component
-                w_X = BX(:, k) .* V_X(:, j, k);  % Adjusted element-wise multiplication
-                w_Y = BY(:, k) .* V_Y(:, j, k);  % Adjusted element-wise multiplication
-                
-                % % % % Debug check for NaN or Inf after w_X and w_Y calculations
-                % % % if any(isnan(w_X)) || any(isnan(w_Y))
-                % % %     error('NaN values detected in w_X or w_Y at component %d, iteration %d', k, j);
-                % % % end
-                % % % if any(isinf(w_X)) || any(isinf(w_Y))
-                % % %     error('Inf values detected in w_X or w_Y at component %d, iteration %d', k, j);
-                % % % end
-
-                % Orthogonalize w against previous V's
-                for i = 1:j
-                    H(i, j, k) = dot(V_X(:, i, k), w_X) + dot(V_Y(:, i, k), w_Y);
-
-                    w_X = w_X - H(i, j, k) * V_X(:, i, k);
-                    w_Y = w_Y - H(i, j, k) * V_Y(:, i, k);
-                end
-                H(j + 1, j, k) = max(norm(w_X, 'fro') * norm(w_Y, 'fro'), small_thresh);
-
-                % Normalize and add new basis vectors if H(j+1, j) is above the threshold
-                if H(j + 1, j, k) > tol
-                    V_X(:, j + 1, k) = w_X / norm(w_X, 'fro');
-                    V_Y(:, j + 1, k) = w_Y / norm(w_Y, 'fro');
-                else
-                    break;  % Skip normalization if the norm is too small
-                end
-            end
-        end
-
-        % Solve least-squares problem for updating X and Y for each rank component
-        for k = 1:r
-            y_k = H(1:restart, 1:restart, k) \ residual_vector(1:restart);  % Solve H*y = residual
-            X_update = V_X(:, 1:restart, k) * y_k;  % Update for X
-            Y_update = V_Y(:, 1:restart, k) * y_k;  % Update for Y
-
-            % Update X_new and Y_new with computed update
-            X_new(:, k) = X_new(:, k) + X_update;
-            Y_new(:, k) = Y_new(:, k) + Y_update;
-        end
-
-        % Increment iteration count
-        iter = iter + 1;
-        
-        % Restart without resetting to x0 and y0 to retain progress
-        if mod(iter, restart) == 0
-            continue;
+        H(k+1, k) = norm(y);
+        if H(k+1, k) ~= 0 && k+1 <= restart
+            Q(:, k+1) = y / H(k+1, k);
         end
     end
 end
 
-
-% % % function [X_new, Y_new] = GMRES_XYv01(AKX, AKY, x0, y0, restart, tol, max_iter)
-% % %     % Custom GMRES routine adapted for low-rank factors
-% % %     % Inputs:
-% % %     %   AKX, AKY - operators for low-rank approximation
-% % %     %   x0, y0   - Initial guesses for the low-rank factors X and Y
-% % %     %   restart  - Number of iterations before restarting GMRES
-% % %     %   tol      - Tolerance for convergence
-% % %     %   max_iter - Maximum number of iterations
-% % % 
-% % %     % Initialize solution and residual
-% % %     X_new = x0;
-% % %     Y_new = y0;
-% % %     residual = tol + 1; % Initial residual to enter loop
-% % %     iter = 0; % Initialize iteration count
-% % %     r = size(X_new, 2); % rank
-% % % 
-% % %     % Loop until convergence or maximum iterations
-% % %     while residual > tol && iter < max_iter
-% % %         % Initialize Krylov subspace for each rank component
-% % %         V_X = zeros(size(X_new, 1), restart, r);
-% % %         V_Y = zeros(size(Y_new, 1), restart, r);
-% % %         H = zeros(restart + 1, restart, r);
-% % % 
-% % %         % Calculate initial residual and its norm for each rank component
-% % %         for k = 1:r
-% % % 
-% % %             % % % ISSUE HERE:
-% % %             % % % AKX is NSxr
-% % %             % % % X_new(:, k) is NSx1
-% % %             % % % 
-% % %             % % % AKY is NVxr
-% % %             % % % Y_new(:, k) is NVx1
-% % % 
-% % %             % AX_new = AKX * X_new(:, k); % Apply effective operator on each column of X
-% % %             % AY_new = AKY * Y_new(:, k); % Apply effective operator on each column of Y
-% % % 
-% % %             AX_new = AKX(:, k) .* X_new(:, k);
-% % %             AY_new = AKY(:, k) .* Y_new(:, k);
-% % % 
-% % %             residual_X = x0(:, k) - AX_new;
-% % %             residual_Y = y0(:, k) - AY_new;
-% % %             residual_k = norm(residual_X, 'fro') * norm(residual_Y, 'fro');
-% % % 
-% % %             % Normalize initial residual
-% % %             if(norm(residual_X, 'fro') ~= 0)
-% % %                 V_X(:, 1, k) = residual_X / norm(residual_X, 'fro');
-% % %             else
-% % %                 V_X(:, 1, k) = 0;
-% % %             end
-% % %             if(norm(residual_Y, 'fro') ~= 0)
-% % %                 V_Y(:, 1, k) = residual_Y / norm(residual_Y, 'fro');
-% % %             else
-% % %                 V_Y(:, 1, k) = 0;
-% % %             end
-% % %         end
-% % % 
-% % %         % Check total residual across rank components
-% % %         residual = sum(arrayfun(@(k) norm(V_X(:, 1, k), 'fro') * norm(V_Y(:, 1, k), 'fro'), 1:r));
-% % %         [num_rows, ~] = size(H(:, :, k));  % Dynamically get the number of rows of H
-% % %         residual_vector = norm(V_X(:, 1, k), 'fro') * norm(V_Y(:, 1, k), 'fro') * ones(num_rows, 1);
-% % % 
-% % %         % Arnoldi process to build Krylov subspace
-% % %         for j = 1:restart
-% % %             for k = 1:r
-% % %                 % Apply the operators AKX and AKY on each rank component
-% % %                 %PROBLEM HERE:
-% % %                 %AKX is (NS,r) and V_X(:,j,k) is (NS,1) so the product
-% % %                 %between the two cannot work
-% % %                 w_X = AKX .* V_X(:, j, k);
-% % %                 w_Y = AKY .* V_Y(:, j, k);
-% % %                 % w_X = AKX'* V_X(:, j, k);
-% % %                 % w_Y = AKY'* V_Y(:, j, k);
-% % % 
-% % %                 % w_X = AKX' * V_X(:, j, k);
-% % %                 % w_Y = AKY' * V_Y(:, j, k);
-% % % 
-% % % 
-% % %                 % Orthogonalize w against previous V's
-% % %                 for i = 1:j
-% % %                     %H(i, j, k) = V_X(:, i, k)' * w_X + V_Y(:, i, k)' * w_Y;
-% % %                     %H(i, j, k) = sum(V_X(:, i, k) .* w_X) + sum(V_Y(:, i, k) .* w_Y);
-% % %                     % H(i, j, k) = dot(V_X(:, i, k), w_X) + dot(V_Y(:, i, k), w_Y);
-% % %                     H(i, j, k) = sum(sum(V_X(:, i, k) .* w_X) + sum(V_Y(:, i, k) .* w_Y));
-% % % 
-% % %                     w_X = w_X - H(i, j, k) * V_X(:, i, k);
-% % %                     w_Y = w_Y - H(i, j, k) * V_Y(:, i, k);
-% % %                 end
-% % %                 H(j + 1, j, k) = norm(w_X, 'fro') * norm(w_Y, 'fro');
-% % % 
-% % %                 % Normalize and add new basis vectors if H(j+1, j) is not zero
-% % %                 if H(j + 1, j, k) > tol
-% % %                     V_X(:, j + 1, k) = w_X / norm(w_X, 'fro');
-% % %                     V_Y(:, j + 1, k) = w_Y / norm(w_Y, 'fro');
-% % %                 else
-% % %                     break;
-% % %                 end
-% % %             end
-% % %         end
-% % % 
-% % %         % Solve least-squares problem for updating X and Y for each rank component
-% % %         for k = 1:r
-% % %             y_k = H(:, :, k) \ residual_vector; % Solve H*y = residual for each rank component
-% % %             X_update = V_X(:, 1:j, k) * y_k(1:j); % Update for X
-% % %             Y_update = V_Y(:, 1:j, k) * y_k(1:j); % Update for Y
-% % % 
-% % %             % Update X_new and Y_new with computed update
-% % %             X_new(:, k) = X_new(:, k) + X_update;
-% % %             Y_new(:, k) = Y_new(:, k) + Y_update;
-% % %         end
-% % % 
-% % %         % Increment iteration count
-% % %         iter = iter + 1;
-% % % 
-% % %         % Restart if needed
-% % %         if mod(iter, restart) == 0
-% % %             X_new = x0;
-% % %             Y_new = y0;
-% % %         end
-% % %     end
-% % % end
-% % % 
+function [Q, H] = arnoldi_process_XY_I(A, q, restart)
+    % arnoldi_process_flat: Arnoldi process with flattened A and q
+    % A_flat: Flattened matrix A (A(:))
+    % q_flat: Flattened starting vector q (q(:))
+    % restart: Number of iterations
+    % m: Number of rows in original matrix A
+    % n: Number of columns in original matrix A
 
 
-% % % function [X_new, Y_new] = GMRES_XYv01(AKX, AKY, x0, y0, restart, tol, max_iter)
-% % %     % Custom GMRES routine adapted for low-rank factors
-% % %     % Inputs:
-% % %     %   AKX, AKY - Effective operators for low-rank approximation
-% % %     %   x0, y0   - Initial guesses for the low-rank factors X and Y
-% % %     %   restart  - Number of iterations before restarting GMRES
-% % %     %   tol      - Tolerance for convergence
-% % %     %   max_iter - Maximum number of iterations
-% % % 
-% % %     % Initialize solution and residual
-% % %     X_new = x0;
-% % %     Y_new = y0;
-% % %     residual = tol + 1; % Initial residual to enter loop
-% % %     iter = 0; % Initialize iteration count
-% % % 
-% % %     % Loop until convergence or maximum iterations
-% % %     while residual > tol && iter < max_iter
-% % %         % Initialize Krylov subspace
-% % %         % V_X = zeros(size(X_new, 1), restart);
-% % %         % V_Y = zeros(size(Y_new, 1), restart);
-% % %         V_X = zeros(size(X_new, 1), restart);
-% % %         V_Y = zeros(size(Y_new, 1), restart);
-% % %         H = zeros(restart + 1, restart);
-% % % 
-% % %         % Calculate initial residual and its norm
-% % %         AX_new = AKX * X_new'; % Apply effective operator on X
-% % %         AY_new = AKY * Y_new'; % Apply effective operator on Y
-% % % 
-% % %         % ISSUE: 
-% % %         % AX_new is NSxNS
-% % %         % AY_new is NVxNV
-% % %         % x0 is NSxr
-% % %         % y0 is NVxr
-% % % 
-% % %         residual_X = x0 - AX_new;
-% % %         residual_Y = y0 - AY_new;
-% % %         residual = norm(residual_X, 'fro') * norm(residual_Y, 'fro');
-% % % 
-% % %         % Normalize initial residual
-% % %         V_X(:, 1) = residual_X / norm(residual_X, 'fro');
-% % %         V_Y(:, 1) = residual_Y / norm(residual_Y, 'fro');
-% % % 
-% % %         % Arnoldi process to build Krylov subspace
-% % %         for j = 1:restart
-% % %             % Apply the operators AKX and AKY
-% % %             w_X = AKX * V_X(:, j);
-% % %             w_Y = AKY * V_Y(:, j);
-% % % 
-% % %             % Orthogonalize w against previous V's
-% % %             for i = 1:j
-% % %                 H(i, j) = V_X(:, i)' * w_X + V_Y(:, i)' * w_Y;
-% % %                 w_X = w_X - H(i, j) * V_X(:, i);
-% % %                 w_Y = w_Y - H(i, j) * V_Y(:, i);
-% % %             end
-% % %             H(j + 1, j) = norm(w_X, 'fro') * norm(w_Y, 'fro');
-% % % 
-% % %             % Normalize and add new basis vectors if H(j+1, j) is not zero
-% % %             if H(j + 1, j) > tol
-% % %                 V_X(:, j + 1) = w_X / norm(w_X, 'fro');
-% % %                 V_Y(:, j + 1) = w_Y / norm(w_Y, 'fro');
-% % %             else
-% % %                 break;
-% % %             end
-% % %         end
-% % % 
-% % %         % Solve least-squares problem for updating X and Y
-% % %         y = H \ residual; % Solve H*y = residual
-% % %         X_update = V_X(:, 1:j) * y(1:j); % Update for X
-% % %         Y_update = V_Y(:, 1:j) * y(1:j); % Update for Y
-% % % 
-% % %         % Update X_new and Y_new with computed update
-% % %         X_new = X_new + X_update;
-% % %         Y_new = Y_new + Y_update;
-% % % 
-% % %         % Recalculate residual for convergence check
-% % %         residual_X = x0 - (AKX * X_new');
-% % %         residual_Y = y0 - (AKY * Y_new');
-% % %         residual = norm(residual_X, 'fro') * norm(residual_Y, 'fro');
-% % % 
-% % %         % Increment iteration count
-% % %         iter = iter + 1;
-% % % 
-% % %         % Restart if needed
-% % %         if mod(iter, restart) == 0
-% % %             X_new = x0;
-% % %             Y_new = y0;
-% % %         end
-% % %     end
-% % % end
+    % Ensure q is not zero
+    if norm(q) == 0
+        error('Starting vector q cannot be zero.');
+    end
+
+    % Initialize outputs
+    H = zeros(restart + 1, restart); % Hessenberg matrix
+    Q = zeros(length(q), restart + 1); % Krylov basis
+
+    % Normalize q and set the first Krylov vector
+    Q(:, 1) = q / norm(q);
+
+    for k = 1:restart
+        % Matrix-vector product: A * Q(:, k)
+        y = A * Q(:, k);
+
+        % Gram-Schmidt orthogonalization
+        for j = 1:k
+            H(j, k) = Q(:, j)' * y;
+            y = y - H(j, k) * Q(:, j);
+        end
+
+        % Compute the next Hessenberg entry
+        H(k + 1, k) = norm(y);
+
+        % Break early if the norm is zero (linear dependence)
+        if H(k + 1, k) == 0
+            break;
+        end
+
+        % Normalize and add to Krylov basis
+        if k + 1 <= restart
+            Q(:, k + 1) = y / H(k + 1, k);
+        end
+    end
+end
+
+    % % n = length(b);
+    % % x = x0;
+    % % r = b - A * x;
+    % % beta = norm(r);
+    % % 
+    % % for iter = 1:max_iter
+    % %     [Q, H] = arnoldi_process(A, r, restart);
+    % %     e1 = zeros(restart+1, 1);
+    % %     e1(1) = beta;
+    % % 
+    % %     % Solve the least squares problem
+    % %     %y = H \ e1; %this goes hysterical because of the sparsity
+    % % 
+    % %     [Q2, R] = qr(H,0);
+    % %     y = R \ (Q2'*e1);
+    % % 
+    % %     x = x + Q(:, 1:restart) * y;
+    % %     r = b - A * x;
+    % %     beta = norm(r);
+    % % 
+    % %     if beta < tol
+    % %         break;
+    % %     end
+    % % end
+
+
+
+
+
