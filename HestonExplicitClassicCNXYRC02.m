@@ -76,29 +76,31 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
 
     for t = 1:NT-1
 
-        x = [X];
-        y = [Y];
+        x = X;
+        y = Y;
 
         [AX,AY] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
+
+        %half Euler step
+        FX = [(1+r*dt/2)*x, (-dt/2)*AX, BX]; 
+        FY = [           y,         AY, BY];
+
+        %Right hand side vector components
+        [BXc,BYc]=CompressData(FX, FY, epsilon);
+
+        %the LHS are operators, not a matrix
+
 
         % Set GMRES parameters
         restart = 80;  % Restart after 20 iterations (example value)
         tol = 1e-5;  % Tolerance for convergence
         max_iter = 100;  % Maximum number of iterations
+        %%BXc and BYc are the components of the RHS vector
+        %%x and y, old values, the initial guesses
+               %%GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter)        
+        [X, Y] = GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter);
 
-
-        % BX = [(1+r*dt/2)*x, (-dt/2)*AX,b1x,b2x,b3x,b4x,b5x];
-        % BY = [           y,         AY,b1y,b2y,b3y,b4y,b5y];
-
-        FX = [(1+r*dt/2)*x, (-dt/2)*AX, BX]; %half Euler step
-        FY = [           y,         AY, BY];
-
-        [BXc,BYc]=CompressData(FX, FY, epsilon);
-
-        % [X, Y] = GMRES_XYv01(BXc, BYc, x, y, restart, tol, max_iter);
-        % [X, Y] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter);
-        [X, Y] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, BXc, BYc, restart, tol, max_iter);
     end    
     U=X*Y';
 end

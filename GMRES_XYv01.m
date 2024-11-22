@@ -18,13 +18,12 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
     Y_new = y0;
     % residual = tol + 1; % Initial residual to enter loop
     % iter = 0; % Initialize iteration count
-    r = size(X_new, 2); % rank
+    rank = size(X_new, 2); % rank
     
     % Small threshold to avoid near-zero division issues
     % small_thresh = eps;  
 
     %r = b - A * x; x is replaced by X0 and Y0 
-    %x is x0, y0
     %A*x is [xl,yl] = HestonMatVec(x0, y0, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho)
     %b is bx*by
     %r = BX*BY-xl*yl;
@@ -33,30 +32,52 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
     %r = BX*BY-xl*yl;
     %the factors need to be stacked-- [BX,+xl]*[BY,-yl] -- these are
     %stacked
-    [xl,yl] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
-    r = BX*BY' - xl*yl'; %%b-A*X 
+    %AX
+    [xl,yl] = HestonMatVec(x0,y0, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+    %residual = BX*BY' - xl*yl'; %%b-A*X 
 
-    first = [BX,xl];
-    second = [BY,-yl];
+    residualX = [BX, -xl];
+    residualY = [BY, yl];
 
-    altR = first*second';
-    beta = norm(r);
+    % residual_compressed = sum(residual, 2);
+    % 
+    % beta = norm(residual);
+
+    %the issue is that residual is not a vector but a NSxNV matrix!
+    %so the arnoldi_Process_XY_I cannot work:
 
     for iter = 1:max_iter
         % [Q,H]= arnoldi_processXY(xl*yl', r, restart);
         %%[Q,H]= arnoldi_processXY(xl*yl', r(:), restart);
-        [Q,H]= arnoldi_process_XY_I(xl*yl', r, restart);
+        %[Q,H]= arnoldi_process_XY_I(xl*yl', residual, restart);
+        % [Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
+        [Qx, Qy, H]= arnoldi_process_XY_I(residualX, residualY, restart);
         e1 = zeros(restart+1,1);
         e1(1)=beta;
         [Q2,R]=qr(H,0);
-        y = R\(Q2'*e1);
-        x = x+Q(:,1:restart)*y;
-        r = b-A*x;
+        yA = R\(Q2'*e1);
+        %next becomes a low rank process
+        %loop 1 - restart, at each step I add the vector of the cellarray
+        %to the low rank factor via Qx and Qy
+        for r = 1:restart
+           %x = x+Q(:,r)*yA(r);
+           x = [x, Qx{r}*yA(r)];
+           y = [y, Qy{r}]
+        end
+        %x = x+Q(:,1:restart)*y;
+        %r = b-A*x;
+        [Ax,Ay] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+        residualX = [BX, -Ax];
+        residualY = [BY, Ay];
+        %new norm that I will implement taking as parameters residualX,
+        %residualY
         beta = norm(r);
 
         if beta<tol
             break;
         end
+        X_new = x;
+        Y_new = y;
     end
 
     % % n = length(b);
@@ -123,7 +144,8 @@ function [Q, H] = arnoldi_processXY(A, q, restart)
     end
 end
 
-function [Q, H] = arnoldi_process_XY_I(A, q, restart)
+%[Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
+function [Qx, Qy, H] = arnoldi_process_XY_I(residualX, residualY, restart)
     % arnoldi_process_flat: Arnoldi process with flattened A and q
     % A_flat: Flattened matrix A (A(:))
     % q_flat: Flattened starting vector q (q(:))
@@ -137,24 +159,49 @@ function [Q, H] = arnoldi_process_XY_I(A, q, restart)
         error('Starting vector q cannot be zero.');
     end
 
+    %replacement for Q:
+    Qx = cell(restart+1,1);
+    Qy = cell(restart+1,1);
+
     % Initialize outputs
     H = zeros(restart + 1, restart); % Hessenberg matrix
-    Q = zeros(length(q), restart + 1); % Krylov basis
+    %Q = zeros(length(q), restart + 1); % Krylov basis
+    %Q = zeros(length(q), restart + 1); % Krylov basis
+
 
     % Normalize q and set the first Krylov vector
-    Q(:, 1) = q / norm(q);
+    % is meant to be a vector and it's a matrix instead
+    % so that raises an error in the following statement:
+    %Q(:, 1) = q / norm(q);
+
+    %The Norm needs to be computed as discussed in low rank format
+    Qx{1}=residualX/norm(residualX);
+    Qy{1}=residualY/norm(residualY);
 
     for k = 1:restart
         % Matrix-vector product: A * Q(:, k)
-        y = A * Q(:, k);
+        %y = A * Q(:, k);
+
+        [Yx,Yy] = HestonMatVec(Qx{k},Qy{k}, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
 
         % Gram-Schmidt orthogonalization
         for j = 1:k
+            %this is calculated with the custom dot product being careful
+            %in the factors rearrangement because if I don't do that, I
+            %lose the low rank efficiency
             H(j, k) = Q(:, j)' * y;
+
             y = y - H(j, k) * Q(:, j);
+
+            %y will be a low rank vector calculated 
+            %the result will be two new Yx and Yy calculated from the above
+            %results
+            %Yx = [Yx, H(j,k)*Qx{k}];
+            %Yy = [Yy, -Qy{k}];
         end
 
         % Compute the next Hessenberg entry
+        % Mind the norm -- already discussed and documented
         H(k + 1, k) = norm(y);
 
         % Break early if the norm is zero (linear dependence)
@@ -164,7 +211,9 @@ function [Q, H] = arnoldi_process_XY_I(A, q, restart)
 
         % Normalize and add to Krylov basis
         if k + 1 <= restart
-            Q(:, k + 1) = y / H(k + 1, k);
+            %Q(:, k + 1) = y / H(k + 1, k);
+            Qx{k+1}=Yx/H(k + 1, k);
+            Qy{k+1}=Yy;%I have to divide only once
         end
     end
 end
