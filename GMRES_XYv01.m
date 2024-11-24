@@ -18,7 +18,7 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
     Y_new = y0;
     % residual = tol + 1; % Initial residual to enter loop
     % iter = 0; % Initialize iteration count
-    rank = size(X_new, 2); % rank
+    %rank = size(X_new, 2); % rank
     
     % Small threshold to avoid near-zero division issues
     % small_thresh = eps;  
@@ -113,36 +113,36 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
 end
 
 
-function [Q, H] = arnoldi_processXY(A, q, restart)
-    %as per definition, this implements the Arnoldi Process
-    %meaning the matrix A, large and in this case sparse
-    %is reduced to a Hessemberg matrix H with an orthonormal basis
-    %Q for the Krylov subspace
-    %please note that the Hessemberg matrix can be in upper or lower form
-    %upper: a(i,j)~=0 for i,j with i>j+1;
-    %lower: a(i,j)~=0 for i,j with j>i+1;
-    %in both definitions, the +1 qualifies the defition that the Hessemberg
-    %matrix is "almost" triangular.
-    %REMEMBER that: AQ approx QH and this is an important proprerty that
-    %makes this decomposition valuable in iterative algorithms.
-
-    n = length(q);
-    H = zeros(restart+1, restart);
-    Q = zeros(n, restart+1);
-    Q(:, 1) = q / norm(q);
-    
-    for k = 1:restart
-        y = A * Q(:, k);
-        for j = 1:k
-            H(j, k) = Q(:, j)' * y;
-            y = y - H(j, k) * Q(:, j);
-        end
-        H(k+1, k) = norm(y);
-        if H(k+1, k) ~= 0 && k+1 <= restart
-            Q(:, k+1) = y / H(k+1, k);
-        end
-    end
-end
+% % % function [Q, H] = arnoldi_processXY(A, q, restart)
+% % %     %as per definition, this implements the Arnoldi Process
+% % %     %meaning the matrix A, large and in this case sparse
+% % %     %is reduced to a Hessemberg matrix H with an orthonormal basis
+% % %     %Q for the Krylov subspace
+% % %     %please note that the Hessemberg matrix can be in upper or lower form
+% % %     %upper: a(i,j)~=0 for i,j with i>j+1;
+% % %     %lower: a(i,j)~=0 for i,j with j>i+1;
+% % %     %in both definitions, the +1 qualifies the defition that the Hessemberg
+% % %     %matrix is "almost" triangular.
+% % %     %REMEMBER that: AQ approx QH and this is an important proprerty that
+% % %     %makes this decomposition valuable in iterative algorithms.
+% % % 
+% % %     n = length(q);
+% % %     H = zeros(restart+1, restart);
+% % %     Q = zeros(n, restart+1);
+% % %     Q(:, 1) = q / norm(q);
+% % % 
+% % %     for k = 1:restart
+% % %         y = A * Q(:, k);
+% % %         for j = 1:k
+% % %             H(j, k) = Q(:, j)' * y;
+% % %             y = y - H(j, k) * Q(:, j);
+% % %         end
+% % %         H(k+1, k) = norm(y);
+% % %         if H(k+1, k) ~= 0 && k+1 <= restart
+% % %             Q(:, k+1) = y / H(k+1, k);
+% % %         end
+% % %     end
+% % % end
 
 %[Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
 function [Qx, Qy, H] = arnoldi_process_XY_I(residualX, residualY, restart)
@@ -154,10 +154,10 @@ function [Qx, Qy, H] = arnoldi_process_XY_I(residualX, residualY, restart)
     % n: Number of columns in original matrix A
 
 
-    % Ensure q is not zero
-    if norm(q) == 0
-        error('Starting vector q cannot be zero.');
-    end
+    % % Ensure q is not zero
+    % if norm(q) == 0
+    %     error('Starting vector q cannot be zero.');
+    % end
 
     %replacement for Q:
     Qx = cell(restart+1,1);
@@ -175,8 +175,12 @@ function [Qx, Qy, H] = arnoldi_process_XY_I(residualX, residualY, restart)
     %Q(:, 1) = q / norm(q);
 
     %The Norm needs to be computed as discussed in low rank format
-    Qx{1}=residualX/norm(residualX);
-    Qy{1}=residualY/norm(residualY);
+    normXY = norm_lr(residualX,residualY);
+    % Qx{1}=residualX/norm(residualX);
+    % Qy{1}=residualY/norm(residualY);
+
+    Qx{1}=residualX/normXY;
+    Qy{1}=residualY/normXY;
 
     for k = 1:restart
         % Matrix-vector product: A * Q(:, k)

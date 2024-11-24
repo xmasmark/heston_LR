@@ -1,0 +1,8 @@
+function nn = dot_lr(Qxj,Qyj,Qxk,Qyk)
+    first_component = Qx1'*Q
+
+
+    [QX,RX]=qr(X);
+    [QY,RY]=qr(Y);
+    nn = norm(RX*RY','fro');
+end
