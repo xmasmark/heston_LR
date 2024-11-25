@@ -51,7 +51,7 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
         %%[Q,H]= arnoldi_processXY(xl*yl', r(:), restart);
         %[Q,H]= arnoldi_process_XY_I(xl*yl', residual, restart);
         % [Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
-        [Qx, Qy, H]= arnoldi_process_XY_I(residualX, residualY, restart);
+        [Qx, Qy, H]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         e1 = zeros(restart+1,1);
         e1(1)=beta;
         [Q2,R]=qr(H,0);
@@ -145,7 +145,7 @@ end
 % % % end
 
 %[Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
-function [Qx, Qy, H] = arnoldi_process_XY_I(residualX, residualY, restart)
+function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho)
     % arnoldi_process_flat: Arnoldi process with flattened A and q
     % A_flat: Flattened matrix A (A(:))
     % q_flat: Flattened starting vector q (q(:))
@@ -193,20 +193,28 @@ function [Qx, Qy, H] = arnoldi_process_XY_I(residualX, residualY, restart)
             %this is calculated with the custom dot product being careful
             %in the factors rearrangement because if I don't do that, I
             %lose the low rank efficiency
-            H(j, k) = Q(:, j)' * y;
+            % H(j, k) = Q(:, j)' * y;
+            % H(j, k) = dot_lr(Qx{},Qy{});
 
-            y = y - H(j, k) * Q(:, j);
+            %two parameters... not four
+            H(j, k) = dot_lr(Qx{j},Qy{j},Qx{k},Qy{k});
+
+            %y = y - H(j, k) * Q(:, j);
 
             %y will be a low rank vector calculated 
             %the result will be two new Yx and Yy calculated from the above
             %results
-            %Yx = [Yx, H(j,k)*Qx{k}];
-            %Yy = [Yy, -Qy{k}];
+            Yx = [Yx, H(j,k)*Qx{k}];
+            Yy = [Yy, -Qy{k}];
         end
 
         % Compute the next Hessenberg entry
         % Mind the norm -- already discussed and documented
-        H(k + 1, k) = norm(y);
+        %H(k + 1, k) = norm(y);
+        
+        normv = norm_lr(Yx,Yy);
+        H(k + 1, k) = normv;
+
 
         % Break early if the norm is zero (linear dependence)
         if H(k + 1, k) == 0
