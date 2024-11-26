@@ -93,12 +93,13 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
 
 
         % Set GMRES parameters
-        restart = 80;  % Restart after 20 iterations (example value)
+        restart = 5;  % Restart after N iterations (example value)
         tol = 1e-5;  % Tolerance for convergence
         max_iter = 100;  % Maximum number of iterations
         %%BXc and BYc are the components of the RHS vector
         %%x and y, old values, the initial guesses
-               %%GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter)        
+               %%GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter) 
+                %GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, beta, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter)               
         [X, Y] = GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter);
 
     end    

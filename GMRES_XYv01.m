@@ -23,6 +23,14 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
     % Small threshold to avoid near-zero division issues
     % small_thresh = eps;  
 
+
+    % n = length(b);
+    % x = x0;
+    % r = b - A * x;
+    % beta = norm(r);
+    % 
+
+
     %r = b - A * x; x is replaced by X0 and Y0 
     %A*x is [xl,yl] = HestonMatVec(x0, y0, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho)
     %b is bx*by
@@ -39,6 +47,8 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
     residualX = [BX, -xl];
     residualY = [BY, yl];
 
+    beta = norm_lr(residualX,residualY);
+
     % residual_compressed = sum(residual, 2);
     % 
     % beta = norm(residual);
@@ -51,7 +61,7 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
         %%[Q,H]= arnoldi_processXY(xl*yl', r(:), restart);
         %[Q,H]= arnoldi_process_XY_I(xl*yl', residual, restart);
         % [Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
-        [Qx, Qy, H]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+        [Qx, Qy, H]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol);
         e1 = zeros(restart+1,1);
         e1(1)=beta;
         [Q2,R]=qr(H,0);
@@ -71,7 +81,8 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
         residualY = [BY, Ay];
         %new norm that I will implement taking as parameters residualX,
         %residualY
-        beta = norm(r);
+        % beta = norm(r);
+        beta = norm_lr(residualX,residualY);
 
         if beta<tol
             break;
@@ -145,7 +156,7 @@ end
 % % % end
 
 %[Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
-function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho)
+function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol)
     % arnoldi_process_flat: Arnoldi process with flattened A and q
     % A_flat: Flattened matrix A (A(:))
     % q_flat: Flattened starting vector q (q(:))
@@ -206,6 +217,9 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
             %results
             Yx = [Yx, H(j,k)*Qx{k}];
             Yy = [Yy, -Qy{k}];
+
+            [Yx,Yy] = CompressData(Yx,Yy,tol);
+
         end
 
         % Compute the next Hessenberg entry
