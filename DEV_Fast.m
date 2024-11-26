@@ -30,7 +30,7 @@ Tmin = 0;  Tmax = Mat;
 
 nS = 29;        % Stock price
 nV = 19;        % Volatility
-nT = 3000;      % Maturity
+nT = 30;      % Maturity
 
 % The maturity time increment and grid
 dt = (Tmax-Tmin)/nT;

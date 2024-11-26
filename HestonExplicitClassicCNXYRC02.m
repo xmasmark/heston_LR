@@ -75,9 +75,11 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
     VMatrix = diag(V);
 
     for t = 1:NT-1
+        tol = 1e-5;  % Tolerance for convergence and compression
 
-        x = X;
-        y = Y;
+        [x,y]=CompressData(X,Y,tol);
+        % x = X;
+        % y = Y;
 
         [AX,AY] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
@@ -93,11 +95,14 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
 
 
         % Set GMRES parameters
-        restart = 5;  % Restart after N iterations (example value)
-        tol = 1e-5;  % Tolerance for convergence
+        restart = 3;  % Restart after N iterations (example value)
+        
         max_iter = 100;  % Maximum number of iterations
         %%BXc and BYc are the components of the RHS vector
         %%x and y, old values, the initial guesses
+        % [x,y]=CompressData(x,y,tol);
+
+
                %%GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter) 
                 %GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, beta, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter)               
         [X, Y] = GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter);

@@ -72,13 +72,16 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
         for r = 1:restart
            %x = x+Q(:,r)*yA(r);
            x = [x, Qx{r}*yA(r)];
-           y = [y, Qy{r}]
+           y = [y, Qy{r}];
         end
         %x = x+Q(:,1:restart)*y;
         %r = b-A*x;
         [Ax,Ay] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         residualX = [BX, -Ax];
         residualY = [BY, Ay];
+
+        [residualX,residualY] = CompressData(residualX,residualY,tol);
+
         %new norm that I will implement taking as parameters residualX,
         %residualY
         % beta = norm(r);
@@ -90,37 +93,6 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
         X_new = x;
         Y_new = y;
     end
-
-    % % n = length(b);
-    % % x = x0;
-    % % r = b - A * x;
-    % % beta = norm(r);
-    % % 
-    % % for iter = 1:max_iter
-    % %     [Q, H] = arnoldi_process(A, r, restart);
-    % %     e1 = zeros(restart+1, 1);
-    % %     e1(1) = beta;
-    % % 
-    % %     % Solve the least squares problem
-    % %     %y = H \ e1; %this goes hysterical because of the sparsity
-    % % 
-    % %     [Q2, R] = qr(H,0);
-    % %     y = R \ (Q2'*e1);
-    % % 
-    % %     x = x + Q(:, 1:restart) * y;
-    % %     r = b - A * x;
-    % %     beta = norm(r);
-    % % 
-    % %     if beta < tol
-    % %         break;
-    % %     end
-    % % end
-
-
-
-    
-    
-
 end
 
 
@@ -207,8 +179,12 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
             % H(j, k) = Q(:, j)' * y;
             % H(j, k) = dot_lr(Qx{},Qy{});
 
-            %two parameters... not four
-            H(j, k) = dot_lr(Qx{j},Qy{j},Qx{k},Qy{k});
+            %two parameters... not four... but they need to be compressed
+            %or the thing will blow up
+            [Qxj,Qyj] = CompressData(Qx{j},Qy{j},tol);
+            [Qxk,Qyk] = CompressData(Qx{k},Qy{k},tol);
+            % H(j, k) = dot_lr(Qx{j},Qy{j},Qx{k},Qy{k});
+            H(j, k) = dot_lr(Qxj,Qyj,Qxk,Qyk);
 
             %y = y - H(j, k) * Q(:, j);
 
@@ -239,37 +215,9 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
         if k + 1 <= restart
             %Q(:, k + 1) = y / H(k + 1, k);
             Qx{k+1}=Yx/H(k + 1, k);
-            Qy{k+1}=Yy;%I have to divide only once
+            Qy{k+1}=Yy; %I have to divide only once
         end
     end
 end
-
-    % % n = length(b);
-    % % x = x0;
-    % % r = b - A * x;
-    % % beta = norm(r);
-    % % 
-    % % for iter = 1:max_iter
-    % %     [Q, H] = arnoldi_process(A, r, restart);
-    % %     e1 = zeros(restart+1, 1);
-    % %     e1(1) = beta;
-    % % 
-    % %     % Solve the least squares problem
-    % %     %y = H \ e1; %this goes hysterical because of the sparsity
-    % % 
-    % %     [Q2, R] = qr(H,0);
-    % %     y = R \ (Q2'*e1);
-    % % 
-    % %     x = x + Q(:, 1:restart) * y;
-    % %     r = b - A * x;
-    % %     beta = norm(r);
-    % % 
-    % %     if beta < tol
-    % %         break;
-    % %     end
-    % % end
-
-
-
 
 
