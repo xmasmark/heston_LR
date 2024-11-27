@@ -74,6 +74,8 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
            x = [x, Qx{r}*yA(r)];
            y = [y, Qy{r}];
         end
+        %how about compressing x and y now before they go further into the
+        %program?
         %x = x+Q(:,1:restart)*y;
         %r = b-A*x;
         [Ax,Ay] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);

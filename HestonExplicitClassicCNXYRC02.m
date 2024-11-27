@@ -75,7 +75,7 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
     VMatrix = diag(V);
 
     for t = 1:NT-1
-        tol = 1e-5;  % Tolerance for convergence and compression
+        tol = 1e-3;  % Tolerance for convergence and compression
 
         [x,y]=CompressData(X,Y,tol);
         % x = X;
@@ -97,7 +97,7 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
         % Set GMRES parameters
         restart = 3;  % Restart after N iterations (example value)
         
-        max_iter = 100;  % Maximum number of iterations
+        max_iter = 10;  % Maximum number of iterations
         %%BXc and BYc are the components of the RHS vector
         %%x and y, old values, the initial guesses
         % [x,y]=CompressData(x,y,tol);
