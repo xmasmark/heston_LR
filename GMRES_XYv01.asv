@@ -23,14 +23,6 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
     % Small threshold to avoid near-zero division issues
     % small_thresh = eps;  
 
-
-    % n = length(b);
-    % x = x0;
-    % r = b - A * x;
-    % beta = norm(r);
-    % 
-
-
     %r = b - A * x; x is replaced by X0 and Y0 
     %A*x is [xl,yl] = HestonMatVec(x0, y0, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho)
     %b is bx*by
@@ -47,8 +39,6 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
     residualX = [BX, -xl];
     residualY = [BY, yl];
 
-    beta = norm_lr(residualX,residualY);
-
     % residual_compressed = sum(residual, 2);
     % 
     % beta = norm(residual);
@@ -61,7 +51,7 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
         %%[Q,H]= arnoldi_processXY(xl*yl', r(:), restart);
         %[Q,H]= arnoldi_process_XY_I(xl*yl', residual, restart);
         % [Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
-        [Qx, Qy, H]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol);
+        [Qx, Qy, H]= arnoldi_process_XY_I(residualX, residualY, restart);
         e1 = zeros(restart+1,1);
         e1(1)=beta;
         [Q2,R]=qr(H,0);
@@ -72,28 +62,16 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
         for r = 1:restart
            %x = x+Q(:,r)*yA(r);
            x = [x, Qx{r}*yA(r)];
-           y = [y, Qy{r}];
+           y = [y, Qy{r}]
         end
-        %how about compressing x and y now before they go further into the
-        %program?
         %x = x+Q(:,1:restart)*y;
         %r = b-A*x;
         [Ax,Ay] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         residualX = [BX, -Ax];
         residualY = [BY, Ay];
-
-        %%%BX and BY never change? This doesn't make sense.
-        %%%Probably it makes sense because this GMRES call is done within
-        %%%one time step so there is no need to update those values. Within
-        %%%the specific time step, the challenge is to solve the linear
-        %%%system.
-
-        [residualX,residualY] = CompressData(residualX,residualY,tol);
-
         %new norm that I will implement taking as parameters residualX,
         %residualY
-        % beta = norm(r);
-        beta = norm_lr(residualX,residualY);
+        beta = norm(r);
 
         if beta<tol
             break;
@@ -101,6 +79,37 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
         X_new = x;
         Y_new = y;
     end
+
+    % % n = length(b);
+    % % x = x0;
+    % % r = b - A * x;
+    % % beta = norm(r);
+    % % 
+    % % for iter = 1:max_iter
+    % %     [Q, H] = arnoldi_process(A, r, restart);
+    % %     e1 = zeros(restart+1, 1);
+    % %     e1(1) = beta;
+    % % 
+    % %     % Solve the least squares problem
+    % %     %y = H \ e1; %this goes hysterical because of the sparsity
+    % % 
+    % %     [Q2, R] = qr(H,0);
+    % %     y = R \ (Q2'*e1);
+    % % 
+    % %     x = x + Q(:, 1:restart) * y;
+    % %     r = b - A * x;
+    % %     beta = norm(r);
+    % % 
+    % %     if beta < tol
+    % %         break;
+    % %     end
+    % % end
+
+
+
+    
+    
+
 end
 
 
@@ -136,7 +145,7 @@ end
 % % % end
 
 %[Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
-function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol)
+function [Qx, Qy, H] = arnoldi_process_low_(residualX, residualY, restart)
     % arnoldi_process_flat: Arnoldi process with flattened A and q
     % A_flat: Flattened matrix A (A(:))
     % q_flat: Flattened starting vector q (q(:))
@@ -184,35 +193,20 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
             %this is calculated with the custom dot product being careful
             %in the factors rearrangement because if I don't do that, I
             %lose the low rank efficiency
-            % H(j, k) = Q(:, j)' * y;
-            % H(j, k) = dot_lr(Qx{},Qy{});
+            H(j, k) = Q(:, j)' * y;
 
-            %two parameters... not four... but they need to be compressed
-            %or the thing will blow up
-            [Qxj,Qyj] = CompressData(Qx{j},Qy{j},tol);
-            [Qxk,Qyk] = CompressData(Qx{k},Qy{k},tol);
-            % H(j, k) = dot_lr(Qx{j},Qy{j},Qx{k},Qy{k});
-            H(j, k) = dot_lr(Qxj,Qyj,Qxk,Qyk);
-
-            %y = y - H(j, k) * Q(:, j);
+            y = y - H(j, k) * Q(:, j);
 
             %y will be a low rank vector calculated 
             %the result will be two new Yx and Yy calculated from the above
             %results
-            Yx = [Yx, H(j,k)*Qx{k}];
-            Yy = [Yy, -Qy{k}];
-
-            [Yx,Yy] = CompressData(Yx,Yy,tol);
-
+            %Yx = [Yx, H(j,k)*Qx{k}];
+            %Yy = [Yy, -Qy{k}];
         end
 
         % Compute the next Hessenberg entry
         % Mind the norm -- already discussed and documented
-        %H(k + 1, k) = norm(y);
-        
-        normv = norm_lr(Yx,Yy);
-        H(k + 1, k) = normv;
-
+        H(k + 1, k) = norm(y);
 
         % Break early if the norm is zero (linear dependence)
         if H(k + 1, k) == 0
@@ -223,9 +217,37 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
         if k + 1 <= restart
             %Q(:, k + 1) = y / H(k + 1, k);
             Qx{k+1}=Yx/H(k + 1, k);
-            Qy{k+1}=Yy; %I have to divide only once
+            Qy{k+1}=Yy;%I have to divide only once
         end
     end
 end
+
+    % % n = length(b);
+    % % x = x0;
+    % % r = b - A * x;
+    % % beta = norm(r);
+    % % 
+    % % for iter = 1:max_iter
+    % %     [Q, H] = arnoldi_process(A, r, restart);
+    % %     e1 = zeros(restart+1, 1);
+    % %     e1(1) = beta;
+    % % 
+    % %     % Solve the least squares problem
+    % %     %y = H \ e1; %this goes hysterical because of the sparsity
+    % % 
+    % %     [Q2, R] = qr(H,0);
+    % %     y = R \ (Q2'*e1);
+    % % 
+    % %     x = x + Q(:, 1:restart) * y;
+    % %     r = b - A * x;
+    % %     beta = norm(r);
+    % % 
+    % %     if beta < tol
+    % %         break;
+    % %     end
+    % % end
+
+
+
 
 

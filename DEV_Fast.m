@@ -30,7 +30,7 @@ Tmin = 0;  Tmax = Mat;
 
 nS = 29;        % Stock price
 nV = 19;        % Volatility
-nT = 30;      % Maturity
+nT = 100;      % Maturity
 
 % The maturity time increment and grid
 dt = (Tmax-Tmin)/nT;
@@ -104,22 +104,26 @@ epsilon = 0.00001;
 %UvTildaPlus = HestonExplicitLowRankRTildaPlus(params,K,r,q,S,V,T,epsilon);
 %UvTildaPlusGMRES = HestonExplicitLowRankRTildaPlusGMRES(params,K,r,q,S,V,T,epsilon);
 
+%HestonExplicitClassicXYEuler(params,K,r,q,S,V,T,mode)
+
 %HestonExplicitClassic(params,K,r,q,S,V,T)
 %UvHEClassicEuler = HestonExplicitClassic(params,K,r,q,Sm,Vm,T);
-%UvHEClassicEulerIntegrated = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,0);
+UvHEClassicEulerIntegrated = HestonExplicitClassicXYEuler(params,K,r,q,Sm,Vm,T,0);
 
 %HestonExplicitClassicCNRC01
 %UvHEClassicCN = HestonExplicitClassicCN(params,K,r,q,Sm,Vm,T);
 %UvHEClassicCN = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,1);
 
 %UvHEClassicCNGMRS = HestonExplicitClassicCN_GMRS(params,K,r,q,Sm,Vm,T);
-%UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,2);
+UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,2);
 
 % GMRES_Result = HestonExplicitClassicCN_GMRS(params,K,r,q,S,V,T);
 
 %P = HestonExplicitClassicCN_GMRS(params,K,r,q,S,V,T);
 
 UvHEClassicCNXYdev = HestonExplicitClassicCNXYRC02(params,K,r,q,Sm,Vm,T,2);
+
+Suliko = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T);
 
 % HestonExplicitClassicCN_GMRS(params,K,r,q,S,V,T)
 % test = HestonExplicitClassicCN_GMRS(params,K,r,q,Sm,Vm,T);
@@ -146,11 +150,13 @@ V0 = 0.05412;
 %UniformPriceTildaPlusGMRES = interp2(V,S,UvTildaPlusGMRES,V0,S0);
 
 %UniformPriceHEClassicEuler = interp2(Vm,Sm,UvHEClassicEuler,V0,S0);
-%UniformPriceHEClassicEulerIntegrated = interp2(Vm,Sm,UvHEClassicEulerIntegrated,V0,S0);
+
+UniformPriceHEClassicEulerIntegrated = interp2(Vm,Sm,UvHEClassicEulerIntegrated,V0,S0);
 
 %UniformPriceHEClassicCN = interp2(Vm,Sm,UvHEClassicCN,V0,S0);
 
-%UniformPriceHEClassicCNGMRS = interp2(Vm,Sm,UvHEClassicCNGMRS,V0,S0);
+UniformPriceHEClassicCNGMRS = interp2(Vm,Sm,UvHEClassicCNGMRS,V0,S0);
+
 UvHEClassicCNXYdevPrice = interp2(Vm,Sm,UvHEClassicCNXYdev,V0,S0);
 
 %% Pricing Using a Non-Uniform Grid
@@ -193,9 +199,9 @@ ClosedPrice = HestonPriceGaussLaguerre(PutCall,S0,K,Mat,r,q,kappa,theta,sigma,la
 % UvHestonEulerError = UvHestonEulerPrice - ClosedPrice;
 % UvHestonCNError = UvHestonCNPrice - ClosedPrice;
 % UvHEClassicEulerError = UniformPriceHEClassicEuler - ClosedPrice;
-% UvHEClassicEulerIntegratedError = UniformPriceHEClassicEulerIntegrated - ClosedPrice;
+UvHEClassicEulerIntegratedError = UniformPriceHEClassicEulerIntegrated - ClosedPrice;
 % UvHEClassicCNError = UniformPriceHEClassicCN - ClosedPrice;
-% UvHEClassicCNGMRSError = UniformPriceHEClassicCNGMRS - ClosedPrice;
+UvHEClassicCNGMRSError = UniformPriceHEClassicCNGMRS - ClosedPrice;
 UvHEClassicCNXYdevError = UvHEClassicCNXYdevPrice - ClosedPrice;
 
 
@@ -204,10 +210,10 @@ UvHEClassicCNXYdevError = UvHEClassicCNXYdevPrice - ClosedPrice;
 fprintf('Stock price grid size  %5.0f\n', nS+1)
 fprintf('Volatility grid size   %5.0f\n', nV+1)
 fprintf('Number of time steps   %5.0f\n', nT)
-fprintf('------------------------------------------\n')
-fprintf('Method                Price   DollarError \n')
-fprintf('------------------------------------------\n')
-fprintf('Closed Form                      %10.4f         \n', ClosedPrice)
+fprintf('---------------------------------------------------------------------------\n')
+fprintf('Method                                          Price    DollarError       \n')
+fprintf('---------------------------------------------------------------------------\n')
+fprintf('Closed Form                                %10.4f              \n', ClosedPrice)
 % fprintf('Uniform Grid Book %10.4f    %5.2f\n', UniformPrice,UError)
 % fprintf('Non-Uniform Grid  %10.4f    %5.2f\n', NonUniformPrice,NError)
 % fprintf('Marco Heston Algo %10.4f    %5.2f\n', UniformPriceLC,MError)
@@ -219,8 +225,8 @@ fprintf('Closed Form                      %10.4f         \n', ClosedPrice)
 % fprintf('Marco Heston Euler               %10.4f    %5.2f\n', UvHestonEulerPrice,UvHestonEulerError)
 %fprintf('Marco Heston CN        %10.4f    %5.2f\n', UvHestonCNPrice,UvHestonCNError)
 % fprintf('Heston Classic Euler             %10.4f    %5.2f\n', UniformPriceHEClassicEuler,UvHEClassicEulerError)
-% fprintf('Heston Classic Euler Integrated  %10.4f    %5.2f\n', UniformPriceHEClassicEulerIntegrated,UvHEClassicEulerIntegratedError)
+fprintf('Heston Classic Euler Operator              %10.4f          %5.2f\n', UniformPriceHEClassicEulerIntegrated,UvHEClassicEulerIntegratedError)
 % fprintf('Heston Classic CN                %10.4f    %5.2f\n', UniformPriceHEClassicCN,UvHEClassicCNError)
-% fprintf('Heston Classic CN GMRS           %10.4f    %5.2f\n', UniformPriceHEClassicCNGMRS,UvHEClassicCNGMRSError)
-fprintf('Heston Classic CN GMRS           %10.4f    %5.2f\n', UvHEClassicCNXYdevPrice,UvHEClassicCNXYdevError)
-fprintf('------------------------------------------\n')
+fprintf('Heston Classic CN GMRS vectorised          %10.4f          %5.2f\n', UniformPriceHEClassicCNGMRS,UvHEClassicCNGMRSError)
+fprintf('Heston Classic CN GMRS Low Rank            %10.4f          %5.2f\n', UvHEClassicCNXYdevPrice,UvHEClassicCNXYdevError)
+fprintf('----------------------------------------------------------------------\n')

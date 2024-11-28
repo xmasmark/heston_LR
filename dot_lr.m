@@ -7,4 +7,5 @@ function nn = dot_lr(Qxj,Qyj,Qxk,Qyk)
     
     dp = dot(first_component,second_component);
     nn = sum(dp);
+    
 end

@@ -1,4 +1,4 @@
-function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
+function U = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T)
 
     %mode is to decide the system resolution:
     %0--> Euler
@@ -74,13 +74,13 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
     S2Matrix = diag(S.^2);
     VMatrix = diag(V);
 
+    testDiff = U-X*Y';
+
     for t = 1:NT-1
+
+        %here is the low rank part
         tol = 1e-3;  % Tolerance for convergence and compression
-
         [x,y]=CompressData(X,Y,tol);
-        % x = X;
-        % y = Y;
-
         [AX,AY] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
 
@@ -91,13 +91,14 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
         %Right hand side vector components
         [BXc,BYc]=CompressData(FX, FY, epsilon);
         %the LHS are operators, not a matrix
-
         % Set GMRES parameters
         restart = 3;  % Restart after N iterations
         max_iter = 10;  % Maximum number of iterations
 
         %%x and y, old values, the initial guesses
         [X, Y] = GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter);
+
+        %here is the vectorised part
 
     end    
     U=X*Y';
