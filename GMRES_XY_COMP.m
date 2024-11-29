@@ -1,4 +1,4 @@
-function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter)
+function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter)
 
 
     %[BX,BY] = HestonMatVecBoundaries    (NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T)
@@ -56,6 +56,11 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
     %the issue is that residual is not a vector but a NSxNV matrix!
     %so the arnoldi_Process_XY_I cannot work:
 
+    n = length(b);
+    xV = x0v;
+    residual = b - A * xV;
+    betaV = norm(residual);
+    
     for iter = 1:max_iter
         % [Q,H]= arnoldi_processXY(xl*yl', r, restart);
         %%[Q,H]= arnoldi_processXY(xl*yl', r(:), restart);
@@ -98,8 +103,30 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
         if beta<tol
             break;
         end
+        %result of low rank
         X_new = x;
         Y_new = y;
+
+
+        [Q, H] = arnoldi_process(A, residual, restart);
+        e1 = zeros(restart+1, 1);
+        e1(1) = betaV;
+        
+        % Solve the least squares problem
+        %y = H \ e1; %this goes hysterical because of the sparsity
+
+        [Q2, R] = qr(H,0);
+        y = R \ (Q2'*e1);
+
+        xV = xV + Q(:, 1:restart) * y;
+        residual = b - A * xV;
+        betaV = norm(residual);
+        
+        if betaV < tol
+            break;
+        end
+        
+        U = reshape(x, [NS, NV]);
     end
 end
 
@@ -134,6 +161,38 @@ end
 % % %         end
 % % %     end
 % % % end
+
+function [Q, H] = arnoldi_process(A, q, restart)
+    %as per definition, this implements the Arnoldi Process
+    %meaning the matrix A, large and in this case sparse
+    %is reduced to a Hessemberg matrix H with an orthonormal basis
+    %Q for the Krylov subspace
+    %please note that the Hessemberg matrix can be in upper or lower form
+    %upper: a(i,j)~=0 for i,j with i>j+1;
+    %lower: a(i,j)~=0 for i,j with j>i+1;
+    %in both definitions, the +1 qualifies the defition that the Hessemberg
+    %matrix is "almost" triangular.
+    %REMEMBER that: AQ approx QH and this is an important proprerty that
+    %makes this decomposition valuable in iterative algorithms.
+
+    n = length(q);
+    H = zeros(restart+1, restart);
+    Q = zeros(n, restart+1);
+    Q(:, 1) = q / norm(q);
+    
+    for k = 1:restart
+        y = A * Q(:, k);
+        for j = 1:k
+            H(j, k) = Q(:, j)' * y;
+            y = y - H(j, k) * Q(:, j);
+        end
+        H(k+1, k) = norm(y);
+        if H(k+1, k) ~= 0 && k+1 <= restart
+            Q(:, k+1) = y / H(k+1, k);
+        end
+    end
+end
+
 
 %[Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
 function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol)

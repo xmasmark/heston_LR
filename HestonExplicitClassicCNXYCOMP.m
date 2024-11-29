@@ -96,7 +96,7 @@ function U = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T)
         max_iter = 10;  % Maximum number of iterations
 
         %%x and y, old values, the initial guesses
-        [X, Y] = GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter);
+        %[X, Y] = GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter);
 
         %here is the vectorised part
 
@@ -173,7 +173,7 @@ function U = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T)
 
         % Solve for U_vec at the next time step
         % Set initial guess for GMRES
-        x0 = U_vec;  % The current solution vector
+        x0v = U_vec;  % The current solution vector
 
         % Set GMRES parameters
         restart = 3;  % Restart after 20 iterations (example value)
@@ -182,7 +182,8 @@ function U = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T)
             
         % Solve using GMRES
         warning('off', 'all')
-        U_vec = restarted_gmres(lhs_matrix, rhs_vector, x0, restart, tol, max_iter);
+        %U_vec = restarted_gmres(lhs_matrix, rhs_vector, x0, restart, tol, max_iter);
+        [X_new, Y_new] = GMRES_XY_COMP(lhs_matrix, rhs_vector, x0v, x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter);
         warning('on', 'all')
         
         U = reshape(U_vec, [NS, NV]);
@@ -190,7 +191,7 @@ function U = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T)
 
         diff = U-reconstructedU;
 
-        fprintf('Norm of diff %5.0f\n', norm(diff, 'fro'));
+        fprintf('Norm of diff %g\n', norm(diff, 'fro'));
 
     end    
     U=X*Y';
