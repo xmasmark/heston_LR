@@ -75,7 +75,7 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
     VMatrix = diag(V);
 
     for t = 1:NT-1
-        tol = 1e-3;  % Tolerance for convergence and compression
+        tol = 1e-5;  % Tolerance for convergence and compression
 
         [x,y]=CompressData(X,Y,tol);
         % x = X;

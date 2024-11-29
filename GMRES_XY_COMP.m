@@ -1,62 +1,18 @@
 function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter)
 
-
-    %[BX,BY] = HestonMatVecBoundaries    (NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T)
-    %function [xl,yl] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho)
-
-
-   % Custom GMRES routine adapted for low-rank factors
-    % Inputs:
-    %   AKX, AKY - operators for low-rank approximation
-    %   x0, y0   - Initial guesses for the low-rank factors X and Y
-    %   restart  - Number of iterations before restarting GMRES
-    %   tol      - Tolerance for convergence
-    %   max_iter - Maximum number of iterations
-
     % Initialize solution and residual
     X_new = x0;
     Y_new = y0;
-    % residual = tol + 1; % Initial residual to enter loop
-    % iter = 0; % Initialize iteration count
-    %rank = size(X_new, 2); % rank
+
     
-    % Small threshold to avoid near-zero division issues
-    % small_thresh = eps;  
-
-
-    % n = length(b);
-    % x = x0;
-    % r = b - A * x;
-    % beta = norm(r);
-    % 
-
-
-    %r = b - A * x; x is replaced by X0 and Y0 
-    %A*x is [xl,yl] = HestonMatVec(x0, y0, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho)
-    %b is bx*by
-    %r = BX*BY-xl*yl;
-    %r is needed in low rank format
-    %r = rx*ry;
-    %r = BX*BY-xl*yl;
-    %the factors need to be stacked-- [BX,+xl]*[BY,-yl] -- these are
-    %stacked
-    %AX
-    [xl,yl] = HestonMatVec(x0,y0, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
-    %residual = BX*BY' - xl*yl'; %%b-A*X 
+    [xl,yl] = HestonMatVec(x0, y0, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
 
     residualX = [BX, -xl];
     residualY = [BY, yl];
 
     beta = norm_lr(residualX,residualY);
 
-    % residual_compressed = sum(residual, 2);
-    % 
-    % beta = norm(residual);
-
-    %the issue is that residual is not a vector but a NSxNV matrix!
-    %so the arnoldi_Process_XY_I cannot work:
-
-    n = length(b);
+    %n = length(b);
     xV = x0v;
     residual = b - A * xV;
     betaV = norm(residual);
@@ -66,11 +22,11 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
         %%[Q,H]= arnoldi_processXY(xl*yl', r(:), restart);
         %[Q,H]= arnoldi_process_XY_I(xl*yl', residual, restart);
         % [Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
-        [Qx, Qy, H]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol);
-        e1 = zeros(restart+1,1);
-        e1(1)=beta;
-        [Q2,R]=qr(H,0);
-        yA = R\(Q2'*e1);
+        [Qx, Qy, Hlr]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol);
+        e1lr = zeros(restart+1,1);
+        e1lr(1)=beta;
+        [Q2lr,Rlr]=qr(Hlr,0);
+        yA = Rlr\(Q2lr'*e1lr);
         %next becomes a low rank process
         %loop 1 - restart, at each step I add the vector of the cellarray
         %to the low rank factor via Qx and Qy
@@ -116,9 +72,9 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
         %y = H \ e1; %this goes hysterical because of the sparsity
 
         [Q2, R] = qr(H,0);
-        y = R \ (Q2'*e1);
+        yv = R \ (Q2'*e1);
 
-        xV = xV + Q(:, 1:restart) * y;
+        xV = xV + Q(:, 1:restart) * yv;
         residual = b - A * xV;
         betaV = norm(residual);
         
@@ -229,8 +185,9 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
     % Qx{1}=residualX/norm(residualX);
     % Qy{1}=residualY/norm(residualY);
 
-    Qx{1}=residualX/normXY;
-    Qy{1}=residualY/normXY;
+    Qx{1}=residualX/(normXY^0.5);
+    %Qy{1}=residualY/normXY;
+    Qy{1}=residualY/(normXY^0.5);
 
     for k = 1:restart
         % Matrix-vector product: A * Q(:, k)

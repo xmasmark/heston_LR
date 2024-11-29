@@ -46,21 +46,10 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
 
     residualX = [BX, -xl];
     residualY = [BY, yl];
-
     beta = norm_lr(residualX,residualY);
 
-    % residual_compressed = sum(residual, 2);
-    % 
-    % beta = norm(residual);
-
-    %the issue is that residual is not a vector but a NSxNV matrix!
-    %so the arnoldi_Process_XY_I cannot work:
-
     for iter = 1:max_iter
-        % [Q,H]= arnoldi_processXY(xl*yl', r, restart);
-        %%[Q,H]= arnoldi_processXY(xl*yl', r(:), restart);
-        %[Q,H]= arnoldi_process_XY_I(xl*yl', residual, restart);
-        % [Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
+        
         [Qx, Qy, H]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol);
         e1 = zeros(restart+1,1);
         e1(1)=beta;
@@ -82,17 +71,9 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
         residualX = [BX, -Ax];
         residualY = [BY, Ay];
 
-        %%%BX and BY never change? This doesn't make sense.
-        %%%Probably it makes sense because this GMRES call is done within
-        %%%one time step so there is no need to update those values. Within
-        %%%the specific time step, the challenge is to solve the linear
-        %%%system.
-
         [residualX,residualY] = CompressData(residualX,residualY,tol);
 
-        %new norm that I will implement taking as parameters residualX,
-        %residualY
-        % beta = norm(r);
+        %beta recalculation
         beta = norm_lr(residualX,residualY);
 
         if beta<tol
@@ -170,8 +151,8 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
     % Qx{1}=residualX/norm(residualX);
     % Qy{1}=residualY/norm(residualY);
 
-    Qx{1}=residualX/normXY;
-    Qy{1}=residualY/normXY;
+    Qx{1}=residualX/(normXY^0.5);
+    Qy{1}=residualY/(normXY^0.5);
 
     for k = 1:restart
         % Matrix-vector product: A * Q(:, k)
@@ -189,10 +170,10 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
 
             %two parameters... not four... but they need to be compressed
             %or the thing will blow up
-            [Qxj,Qyj] = CompressData(Qx{j},Qy{j},tol);
-            [Qxk,Qyk] = CompressData(Qx{k},Qy{k},tol);
+            [Qxj,Qyj] = CompressData(Qx{j}, Qy{j}, tol);
+            [Qxk,Qyk] = CompressData(Qx{k}, Qy{k}, tol);
             % H(j, k) = dot_lr(Qx{j},Qy{j},Qx{k},Qy{k});
-            H(j, k) = dot_lr(Qxj,Qyj,Qxk,Qyk);
+            H(j, k) = dot_lr(Qxj, Qyj, Qxk, Qyk);
 
             %y = y - H(j, k) * Q(:, j);
 
