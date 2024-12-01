@@ -18,15 +18,18 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
     betaV = norm(residual);
     
     for iter = 1:max_iter
-        % [Q,H]= arnoldi_processXY(xl*yl', r, restart);
-        %%[Q,H]= arnoldi_processXY(xl*yl', r(:), restart);
-        %[Q,H]= arnoldi_process_XY_I(xl*yl', residual, restart);
-        % [Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
+        
+        %[Qx, Qy, Hlr]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol);
         [Qx, Qy, Hlr]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol);
         e1lr = zeros(restart+1,1);
         e1lr(1)=beta;
-        [Q2lr,Rlr]=qr(Hlr,0);
-        yA = Rlr\(Q2lr'*e1lr);
+
+        % [Q2lr,Rlr]=qr(Hlr,0);
+        % yA = Rlr\(Q2lr'*e1lr);
+
+        yA=Hlr\e1lr;
+
+
         %next becomes a low rank process
         %loop 1 - restart, at each step I add the vector of the cellarray
         %to the low rank factor via Qx and Qy
@@ -35,29 +38,23 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
            x = [x, Qx{i}*yA(i)];
            y = [y, Qy{i}];
         end
-        %how about compressing x and y now before they go further into the
-        %program?
+
         %x = x+Q(:,1:restart)*y;
         %r = b-A*x;
-        [Ax,Ay] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+
+        [Ax,Ay] = HestonMatVec(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         residualX = [BX, -Ax];
-        residualY = [BY, Ay];
+        residualY = [BY,  Ay];
 
-        %%%BX and BY never change? This doesn't make sense.
-        %%%Probably it makes sense because this GMRES call is done within
-        %%%one time step so there is no need to update those values. Within
-        %%%the specific time step, the challenge is to solve the linear
-        %%%system.
-
-        [residualX,residualY] = CompressData(residualX,residualY,tol);
+        [residualX,residualY] = CompressData(residualX, residualY, tol);
 
         %new norm that I will implement taking as parameters residualX,
         %residualY
         % beta = norm(r);
-        beta = norm_lr(residualX,residualY);
+        beta = norm_lr(residualX, residualY);
 
         if beta<tol
-            break;
+            % break;
         end
         %result of low rank
         X_new = x;
@@ -78,11 +75,17 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
         residual = b - A * xV;
         betaV = norm(residual);
         
-        if betaV < tol
+        U = reshape(xV, [NS, NV]);
+        diff = U - x*y';
+
+        % if betaV < tol || beta < tol
+        %     break;
+        % end
+        if beta < tol
             break;
         end
         
-        U = reshape(x, [NS, NV]);
+        
     end
 end
 
@@ -185,9 +188,10 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
     % Qx{1}=residualX/norm(residualX);
     % Qy{1}=residualY/norm(residualY);
 
-    Qx{1}=residualX/(normXY^0.5);
-    %Qy{1}=residualY/normXY;
-    Qy{1}=residualY/(normXY^0.5);
+    nr = sqrt(normXY);
+
+    Qx{1}=residualX/(nr);
+    Qy{1}=residualY/(nr);
 
     for k = 1:restart
         % Matrix-vector product: A * Q(:, k)
@@ -208,7 +212,13 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
             [Qxj,Qyj] = CompressData(Qx{j},Qy{j},tol);
             [Qxk,Qyk] = CompressData(Qx{k},Qy{k},tol);
             % H(j, k) = dot_lr(Qx{j},Qy{j},Qx{k},Qy{k});
+            
             H(j, k) = dot_lr(Qxj,Qyj,Qxk,Qyk);
+
+            first_norm = norm(Qxk*Qyk');
+            second_norm = norm(Qxj*Qyj');
+
+            %H(j,k)=H(j,k)/norm(Qxk*Qyk');
 
             %y = y - H(j, k) * Q(:, j);
 

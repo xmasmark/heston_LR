@@ -123,7 +123,7 @@ UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,2);
 
 UvHEClassicCNXYdev = HestonExplicitClassicCNXYRC02(params,K,r,q,Sm,Vm,T,2);
 
-%Suliko = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T);
+Suliko = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T);
 
 % HestonExplicitClassicCN_GMRS(params,K,r,q,S,V,T)
 % test = HestonExplicitClassicCN_GMRS(params,K,r,q,Sm,Vm,T);
@@ -229,4 +229,4 @@ fprintf('Heston Classic Euler Operator              %10.4f          %5.2f\n', Un
 % fprintf('Heston Classic CN                %10.4f    %5.2f\n', UniformPriceHEClassicCN,UvHEClassicCNError)
 fprintf('Heston Classic CN GMRS vectorised          %10.4f          %5.2f\n', UniformPriceHEClassicCNGMRS,UvHEClassicCNGMRSError)
 fprintf('Heston Classic CN GMRS Low Rank            %10.4f          %5.2f\n', UvHEClassicCNXYdevPrice,UvHEClassicCNXYdevError)
-fprintf('----------------------------------------------------------------------\n')
+fprintf('---------------------------------------------------------------------------\n')
