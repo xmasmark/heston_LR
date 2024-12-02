@@ -155,18 +155,6 @@ end
 
 %[Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
 function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol)
-    % arnoldi_process_flat: Arnoldi process with flattened A and q
-    % A_flat: Flattened matrix A (A(:))
-    % q_flat: Flattened starting vector q (q(:))
-    % restart: Number of iterations
-    % m: Number of rows in original matrix A
-    % n: Number of columns in original matrix A
-
-
-    % % Ensure q is not zero
-    % if norm(q) == 0
-    %     error('Starting vector q cannot be zero.');
-    % end
 
     %replacement for Q:
     Qx = cell(restart+1,1);
@@ -174,9 +162,6 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
 
     % Initialize outputs
     H = zeros(restart + 1, restart); % Hessenberg matrix
-    %Q = zeros(length(q), restart + 1); % Krylov basis
-    %Q = zeros(length(q), restart + 1); % Krylov basis
-
 
     % Normalize q and set the first Krylov vector
     % is meant to be a vector and it's a matrix instead
@@ -202,10 +187,6 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
         % Gram-Schmidt orthogonalization
         for j = 1:k
             %this is calculated with the custom dot product being careful
-            %in the factors rearrangement because if I don't do that, I
-            %lose the low rank efficiency
-            % H(j, k) = Q(:, j)' * y;
-            % H(j, k) = dot_lr(Qx{},Qy{});
 
             %two parameters... not four... but they need to be compressed
             %or the thing will blow up
@@ -213,14 +194,11 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
             [Qxk,Qyk] = CompressData(Qx{k},Qy{k},tol);
             % H(j, k) = dot_lr(Qx{j},Qy{j},Qx{k},Qy{k});
             
-            H(j, k) = dot_lr(Qxj,Qyj,Qxk,Qyk);
+            %H(j, k) = dot_lr(Qxj,Qyj,Qxk,Qyk);
+            H(j, k) = dot_lr(Qxj,Qyj,Yx,Yy);
 
             first_norm = norm(Qxk*Qyk');
             second_norm = norm(Qxj*Qyj');
-
-            %H(j,k)=H(j,k)/norm(Qxk*Qyk');
-
-            %y = y - H(j, k) * Q(:, j);
 
             %y will be a low rank vector calculated 
             %the result will be two new Yx and Yy calculated from the above

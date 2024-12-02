@@ -173,7 +173,8 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
             [Qxj,Qyj] = CompressData(Qx{j}, Qy{j}, tol);
             [Qxk,Qyk] = CompressData(Qx{k}, Qy{k}, tol);
             % H(j, k) = dot_lr(Qx{j},Qy{j},Qx{k},Qy{k});
-            H(j, k) = dot_lr(Qxj, Qyj, Qxk, Qyk);
+            % H(j, k) = dot_lr(Qxj, Qyj, Qxk, Qyk);
+            H(j, k) = dot_lr(Qxj,Qyj,Yx,Yy);
 
             %y = y - H(j, k) * Q(:, j);
 

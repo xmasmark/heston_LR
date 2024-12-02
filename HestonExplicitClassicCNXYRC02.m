@@ -84,9 +84,15 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
         [AX,AY] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
 
+        % % %half Euler step
+        % FX = [(1+r*dt/2)*x, (-dt/2)*AX, BX]; 
+        % FY = [           y,         AY, BY];
+
         %half Euler step
         FX = [(1+r*dt/2)*x, (-dt/2)*AX, BX]; 
         FY = [           y,         AY, BY];
+        
+
 
         %Right hand side vector components
         [BXc,BYc]=CompressData(FX, FY, epsilon);
