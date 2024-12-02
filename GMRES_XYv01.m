@@ -158,7 +158,23 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
         % Matrix-vector product: A * Q(:, k)
         %y = A * Q(:, k);
 
+        %this is the equivalent of A*Q
         [Yx,Yy] = HestonMatVec(Qx{k},Qy{k}, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+
+
+    % for k = 1:restart
+    %     y = A * Q(:, k);
+    %     for j = 1:k
+    %         H(j, k) = Q(:, j)' * y;
+    %         y = y - H(j, k) * Q(:, j);
+    %     end
+    %     H(k+1, k) = norm(y);
+    %     if H(k+1, k) ~= 0 && k+1 <= restart
+    %         Q(:, k+1) = y / H(k+1, k);
+    %     end
+    % end
+
+        %so y in snapshot is equivalent to Yx*Yy' here.
 
         % Gram-Schmidt orthogonalization
         for j = 1:k
@@ -171,7 +187,7 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
             %two parameters... not four... but they need to be compressed
             %or the thing will blow up
             [Qxj,Qyj] = CompressData(Qx{j}, Qy{j}, tol);
-            [Qxk,Qyk] = CompressData(Qx{k}, Qy{k}, tol);
+            % [Qxk,Qyk] = CompressData(Qx{k}, Qy{k}, tol);
             % H(j, k) = dot_lr(Qx{j},Qy{j},Qx{k},Qy{k});
             % H(j, k) = dot_lr(Qxj, Qyj, Qxk, Qyk);
             H(j, k) = dot_lr(Qxj,Qyj,Yx,Yy);
