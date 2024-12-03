@@ -29,7 +29,6 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
 
         yA=Hlr\e1lr;
 
-
         %next becomes a low rank process
         %loop 1 - restart, at each step I add the vector of the cellarray
         %to the low rank factor via Qx and Qy
@@ -53,14 +52,16 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
         % beta = norm(r);
         beta = norm_lr(residualX, residualY);
 
+        X_new = x;
+        Y_new = y;
+        
         if beta<tol
             % break;
         end
         %result of low rank
-        X_new = x;
-        Y_new = y;
+    end
 
-
+    for iter = 1:max_iter
         [Q, H] = arnoldi_process(A, residual, restart);
         e1 = zeros(restart+1, 1);
         e1(1) = betaV;
@@ -84,9 +85,9 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
         if beta < tol
             break;
         end
-        
-        
     end
+
+    
 end
 
 
