@@ -56,7 +56,7 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
         Y_new = y;
         
         if beta<tol
-            % break;
+            break;
         end
         %result of low rank
     end
@@ -77,7 +77,6 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
         betaV = norm(residual);
         
         U = reshape(xV, [NS, NV]);
-        diff = U - x*y';
 
         % if betaV < tol || beta < tol
         %     break;
@@ -87,7 +86,7 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
         end
     end
 
-    
+    diff = U - X_new*Y_new';
 end
 
 
