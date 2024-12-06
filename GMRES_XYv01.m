@@ -91,7 +91,7 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
 
         X_new = x;
         Y_new = y;
-        
+
         if beta<tol
             break;
         end
