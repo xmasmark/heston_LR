@@ -1,4 +1,4 @@
-function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
+function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode, iterations, restart)
 
     %mode is to decide the system resolution:
     %0--> Euler
@@ -116,10 +116,13 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
         % FX = [(1+r*dt/2)*x, (-dt/2)*AX, BX]; 
         % FY = [           y,         AY, BY];
 
-        %half Euler step
-        FX = [(1-r*dt/2)*x,  (+dt/2)*AX,  (+dt/2)*BX]; 
-        FY = [           y,          AY,          BY];
+        % %half Euler step
+        % FX = [(1-r*dt/2)*x,  (+dt/2)*AX,  (+dt/2)*BX]; 
+        % FY = [           y,          AY,          BY];
         
+        %half Euler step
+        FX = [(1-r*dt/2)*x, (dt/2)*AX, dt*BX]; 
+        FY = [           y,         AY, BY];
 
 
         %Right hand side vector components
@@ -127,8 +130,8 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
         %the LHS are operators, not a matrix
 
         % Set GMRES parameters
-        restart = 80;  % Restart after N iterations
-        max_iter = 100;  % Maximum number of iterations
+        % restart = 80;  % Restart after N iterations
+        max_iter = iterations;  % Maximum number of iterations
 
         %%x and y, old values, the initial guesses
         [X, Y] = GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter);

@@ -84,9 +84,11 @@ function U = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T)
         [AX,AY] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
 
+        %rhs_vector = ((1-(dt*r/2))*U_vec + (dt/2)*Av) + dt*Bv;
+
         %half Euler step
-        FX = [(1+r*dt/2)*x, (-dt/2)*AX, BX]; 
-        FY = [           y,         AY, -BY];
+        FX = [(1-r*dt/2)*x, (dt/2)*AX, dt*BX]; 
+        FY = [           y,         AY, BY];
 
         %Right hand side vector components
         [BXc,BYc]=CompressData(FX, FY, epsilon);
@@ -176,16 +178,17 @@ function U = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T)
         x0v = U_vec;  % The current solution vector
 
         % Set GMRES parameters
-        restart = 3;  % Restart after 20 iterations (example value)
-        tol = 1e-3;  % Tolerance for convergence
-        max_iter = 10;  % Maximum number of iterations
+        restart = 1;  % Restart after 20 iterations (example value)
+        tol = 1e-5;  % Tolerance for convergence
+        max_iter = 1;  % Maximum number of iterations
         
         % testDiff = reshape(x0v,[NS,NV])-x*y';
 
         % Solve using GMRES
         warning('off', 'all')
         %U_vec = restarted_gmres(lhs_matrix, rhs_vector, x0, restart, tol, max_iter);
-        [X_new, Y_new] = GMRES_XY_COMP(lhs_matrix, rhs_vector, x0v, x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter);
+                       % GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T,                   BX,  BY, x0,y0, restart, tol, max_iter)
+        [X_new, Y_new] = GMRES_XY_COMP(lhs_matrix, rhs_vector, x0v, x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter,dt);
         warning('on', 'all')
         
         U = reshape(U_vec, [NS, NV]);

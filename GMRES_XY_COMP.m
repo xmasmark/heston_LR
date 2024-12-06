@@ -1,4 +1,11 @@
-function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter)
+function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter, dt)
+
+    testb = reshape(b,[NS,NV]) - BX*BY';
+
+    fnb = norm(testb,'fro');
+
+    testInitial = reshape(x0v,[NS,NV])-x0*y0';
+    fnIni = norm(testInitial,'fro');
 
     % Initialize solution and residual
     X_new = x0;
@@ -6,9 +13,18 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
 
     [xl,yl] = HestonMatVec(x0, y0, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
 
-    residualX = [BX, -xl];
-    residualY = [BY, yl];
+    %this is the matrix multiplied by A however, it's not what I need for
+    %the linear system..
+    %lhs_matrix = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*AK);  
+    %lhs matrix * x0v = ((1+(dt*r/2))*eye(NS*NV)*x0v - (dt/2)*AK*x0v);
+    %lhs matrix * x0v = ((1+(dt*r/2))*x0v - (dt/2)*xlv);
+    %lhs matrix * x0v = (1+dt*r/2)*x0v - dt/2*xlv;
+    % residualX = [BX, -xl*dt];
+    % residualY = [BY, yl];
 
+    residualX = [BX, -(1+dt*r/2)*x0, (dt/2)*xl];
+    residualY = [BY,             y0,         yl];
+    
     beta = norm_lr(residualX,residualY);
 
     for iter = 1:max_iter

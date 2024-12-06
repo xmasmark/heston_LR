@@ -1,4 +1,4 @@
-function U = HestonExplicitClassicCNRC01(params,K,r,q,S,V,T,mode)
+function U = HestonExplicitClassicCNRC01(params,K,r,q,S,V,T,mode, iterations, restart)
 
     %mode is to decide the system resolution:
     %0--> Euler
@@ -166,9 +166,9 @@ function U = HestonExplicitClassicCNRC01(params,K,r,q,S,V,T,mode)
             x0 = U_vec;  % The current solution vector
 
             % Set GMRES parameters
-            restart = 80;  % Restart after 20 iterations (example value)
+            %restart = 80;  % Restart after 20 iterations (example value)
             tol = 1e-5;  % Tolerance for convergence
-            max_iter = 100;  % Maximum number of iterations
+            max_iter = iterations;  % Maximum number of iterations
             
             % Solve using GMRES
             warning('off', 'all')

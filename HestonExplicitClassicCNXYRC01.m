@@ -1,4 +1,4 @@
-function U = HestonExplicitClassicCNXYRC01(params,K,r,q,S,V,T,mode)
+function U = HestonExplicitClassicCNXYRC01(params,K,r,q,S,V,T,mode, iterations, restart)
 
     %mode is to decide the system resolution:
     %0--> Euler
@@ -199,9 +199,9 @@ function U = HestonExplicitClassicCNXYRC01(params,K,r,q,S,V,T,mode)
         % % newY = [cs*y YC];
 
         % Set GMRES parameters
-        restart = 80;  % Restart after 20 iterations (example value)
+        % restart = 80;  % Restart after 20 iterations (example value)
         tol = 1e-5;  % Tolerance for convergence
-        max_iter = 100;  % Maximum number of iterations
+        max_iter = iterations;  % Maximum number of iterations
 
         % x0=zeros(NS,size(AKX,2));
         % y0=zeros(NV,size(AKY,2));

@@ -115,15 +115,19 @@ UvHEClassicEulerIntegrated = HestonExplicitClassicXYEuler(params,K,r,q,Sm,Vm,T,0
 %UvHEClassicCN = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,1);
 
 %UvHEClassicCNGMRS = HestonExplicitClassicCN_GMRS(params,K,r,q,Sm,Vm,T);
-UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,2);
+
+iterations = 1;
+restart = 1;
+
+UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,2, iterations, restart);
 
 % GMRES_Result = HestonExplicitClassicCN_GMRS(params,K,r,q,S,V,T);
 
 %P = HestonExplicitClassicCN_GMRS(params,K,r,q,S,V,T);
 
-UvHEClassicCNXYdev = HestonExplicitClassicCNXYRC02(params,K,r,q,Sm,Vm,T,2);
+UvHEClassicCNXYdev = HestonExplicitClassicCNXYRC02(params,K,r,q,Sm,Vm,T,2, iterations, restart);
 
-% Suliko = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T);
+Suliko = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T);
 
 % HestonExplicitClassicCN_GMRS(params,K,r,q,S,V,T)
 % test = HestonExplicitClassicCN_GMRS(params,K,r,q,Sm,Vm,T);
