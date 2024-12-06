@@ -86,7 +86,7 @@ function U = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T)
 
         %half Euler step
         FX = [(1+r*dt/2)*x, (-dt/2)*AX, BX]; 
-        FY = [           y,         AY, BY];
+        FY = [           y,         AY, -BY];
 
         %Right hand side vector components
         [BXc,BYc]=CompressData(FX, FY, epsilon);
@@ -179,7 +179,9 @@ function U = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T)
         restart = 3;  % Restart after 20 iterations (example value)
         tol = 1e-3;  % Tolerance for convergence
         max_iter = 10;  % Maximum number of iterations
-            
+        
+        % testDiff = reshape(x0v,[NS,NV])-x*y';
+
         % Solve using GMRES
         warning('off', 'all')
         %U_vec = restarted_gmres(lhs_matrix, rhs_vector, x0, restart, tol, max_iter);

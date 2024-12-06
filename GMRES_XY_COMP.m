@@ -4,7 +4,6 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
     X_new = x0;
     Y_new = y0;
 
-    
     [xl,yl] = HestonMatVec(x0, y0, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
 
     residualX = [BX, -xl];
@@ -12,14 +11,8 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
 
     beta = norm_lr(residualX,residualY);
 
-    %n = length(b);
-    xV = x0v;
-    residual = b - A * xV;
-    betaV = norm(residual);
-    
     for iter = 1:max_iter
         
-        %[Qx, Qy, Hlr]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol);
         [Qx, Qy, Hlr]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol);
         e1lr = zeros(restart+1,1);
         e1lr(1)=beta;
@@ -60,6 +53,11 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
         end
         %result of low rank
     end
+
+    %n = length(b);
+    xV = x0v;
+    residual = b - A * xV;
+    betaV = norm(residual);
 
     for iter = 1:max_iter
         [Q, H] = arnoldi_process(A, residual, restart);
@@ -163,11 +161,6 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
     % Initialize outputs
     H = zeros(restart + 1, restart); % Hessenberg matrix
 
-    % Normalize q and set the first Krylov vector
-    % is meant to be a vector and it's a matrix instead
-    % so that raises an error in the following statement:
-    %Q(:, 1) = q / norm(q);
-
     %The Norm needs to be computed as discussed in low rank format
     normXY = norm_lr(residualX,residualY);
     % Qx{1}=residualX/norm(residualX);
@@ -186,25 +179,13 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
 
         % Gram-Schmidt orthogonalization
         for j = 1:k
-            %this is calculated with the custom dot product being careful
-
-            %two parameters... not four... but they need to be compressed
-            %or the thing will blow up
             [Qxj,Qyj] = CompressData(Qx{j},Qy{j},tol);
-            [Qxk,Qyk] = CompressData(Qx{k},Qy{k},tol);
-            % H(j, k) = dot_lr(Qx{j},Qy{j},Qx{k},Qy{k});
-            
+            % [Qxk,Qyk] = CompressData(Qx{k},Qy{k},tol);
             %H(j, k) = dot_lr(Qxj,Qyj,Qxk,Qyk);
             H(j, k) = dot_lr(Qxj,Qyj,Yx,Yy);
 
-            first_norm = norm(Qxk*Qyk');
-            second_norm = norm(Qxj*Qyj');
-
-            %y will be a low rank vector calculated 
-            %the result will be two new Yx and Yy calculated from the above
-            %results
-            Yx = [Yx, H(j,k)*Qx{k}];
-            Yy = [Yy, -Qy{k}];
+            Yx = [Yx, H(j,k)*Qx{j}];
+            Yy = [Yy, -Qy{j}];
 
             [Yx,Yy] = CompressData(Yx,Yy,tol);
 
@@ -216,7 +197,6 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
         
         normv = norm_lr(Yx,Yy);
         H(k + 1, k) = normv;
-
 
         % Break early if the norm is zero (linear dependence)
         if H(k + 1, k) == 0

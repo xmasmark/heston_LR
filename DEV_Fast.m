@@ -123,7 +123,7 @@ UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,2);
 
 UvHEClassicCNXYdev = HestonExplicitClassicCNXYRC02(params,K,r,q,Sm,Vm,T,2);
 
-Suliko = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T);
+% Suliko = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T);
 
 % HestonExplicitClassicCN_GMRS(params,K,r,q,S,V,T)
 % test = HestonExplicitClassicCN_GMRS(params,K,r,q,Sm,Vm,T);

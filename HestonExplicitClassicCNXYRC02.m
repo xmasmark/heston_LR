@@ -74,6 +74,34 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
     S2Matrix = diag(S.^2);
     VMatrix = diag(V);
 
+
+        % % % % % % lhs_matrix = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*AK);  
+        % % % % % % rhs_vector = ((1-(dt*r/2))*U_vec + (dt/2)*Av) + dt*Bv;
+        % % % % % % 
+        % % % % % % % Solve for U_vec at the next time step
+        % % % % % % if mode == 0
+        % % % % % %     U_vec = (1-dt*r)*U_vec+dt*(Av + Bv);
+        % % % % % % end
+        % % % % % % if mode == 1
+        % % % % % %     U_vec = lhs_matrix \ rhs_vector;
+        % % % % % % end
+        % % % % % % if mode == 2
+        % % % % % %     % Set initial guess for GMRES
+        % % % % % %     x0 = U_vec;  % The current solution vector
+        % % % % % % 
+        % % % % % %     % Set GMRES parameters
+        % % % % % %     restart = 80;  % Restart after 20 iterations (example value)
+        % % % % % %     tol = 1e-5;  % Tolerance for convergence
+        % % % % % %     max_iter = 100;  % Maximum number of iterations
+        % % % % % % 
+        % % % % % %     % Solve using GMRES
+        % % % % % %     warning('off', 'all')
+        % % % % % %     U_vec = restarted_gmres(lhs_matrix, rhs_vector, x0, restart, tol, max_iter);
+        % % % % % %     warning('on', 'all')
+        % % % % % % end
+
+
+
     for t = 1:NT-1
         tol = 1e-5;  % Tolerance for convergence and compression
 
@@ -89,8 +117,8 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
         % FY = [           y,         AY, BY];
 
         %half Euler step
-        FX = [(1+r*dt/2)*x,  (-dt/2)*AX, BX]; 
-        FY = [           y,          AY, BY];
+        FX = [(1-r*dt/2)*x,  (+dt/2)*AX,  (+dt/2)*BX]; 
+        FY = [           y,          AY,          BY];
         
 
 
@@ -99,8 +127,8 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode)
         %the LHS are operators, not a matrix
 
         % Set GMRES parameters
-        restart = 3;  % Restart after N iterations
-        max_iter = 10;  % Maximum number of iterations
+        restart = 80;  % Restart after N iterations
+        max_iter = 100;  % Maximum number of iterations
 
         %%x and y, old values, the initial guesses
         [X, Y] = GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter);

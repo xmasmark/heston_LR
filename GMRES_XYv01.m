@@ -197,8 +197,10 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
             %y will be a low rank vector calculated 
             %the result will be two new Yx and Yy calculated from the above
             %results
-            Yx = [Yx, H(j,k)*Qx{k}];
-            Yy = [Yy, -Qy{k}];
+            % Yx = [Yx, H(j,k)*Qx{k}];
+            % Yy = [Yy, -Qy{k}];
+            Yx = [Yx, H(j,k)*Qx{j}];
+            Yy = [Yy, -Qy{j}];
 
             [Yx,Yy] = CompressData(Yx,Yy,tol);
 
