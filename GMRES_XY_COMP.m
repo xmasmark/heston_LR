@@ -29,7 +29,7 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
 
     for iter = 1:max_iter
         
-        [Qx, Qy, Hlr]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol);
+        [Qx, Qy, Hlr]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol, dt);
         e1lr = zeros(restart+1,1);
         e1lr(1)=beta;
 
@@ -172,7 +172,7 @@ end
 
 
 %[Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
-function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol)
+function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol, dt)
 
     %replacement for Q:
     Qx = cell(restart+1,1);

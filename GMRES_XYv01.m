@@ -58,7 +58,7 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
 
     for iter = 1:max_iter
         
-        [Qx, Qy, H]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol);
+        [Qx, Qy, H]= arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol, dt);
         e1 = zeros(restart+1,1);
         e1(1)=beta;
         [Q2,R]=qr(H,0);
@@ -130,7 +130,7 @@ end
 % % % end
 
 %[Q,H]= arnoldi_process_XY_I(xl, yl, residualX, residualY, restart);
-function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol)
+function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, tol, dt)
     % arnoldi_process_flat: Arnoldi process with flattened A and q
     % A_flat: Flattened matrix A (A(:))
     % q_flat: Flattened starting vector q (q(:))
@@ -174,49 +174,21 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
         %this is the equivalent of A*Q
         [Yx,Yy] = HestonMatVec(Qx{k},Qy{k}, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
 
-
-    % for k = 1:restart
-    %     y = A * Q(:, k);
-    %     for j = 1:k
-    %         H(j, k) = Q(:, j)' * y;
-    %         y = y - H(j, k) * Q(:, j);
-    %     end
-    %     H(k+1, k) = norm(y);
-    %     if H(k+1, k) ~= 0 && k+1 <= restart
-    %         Q(:, k+1) = y / H(k+1, k);
-    %     end
-    % end
-
-        %so y in snapshot is equivalent to Yx*Yy' here.
+        %change of sign because not residuals
+        Yx = [(1+dt*r/2)*Qx{k}, -(dt/2)*Yx];
+        Yy = [Qy{k}, Yy];
 
         % Gram-Schmidt orthogonalization
         for j = 1:k
-            %this is calculated with the custom dot product being careful
-            %in the factors rearrangement because if I don't do that, I
-            %lose the low rank efficiency
-            % H(j, k) = Q(:, j)' * y;
-            % H(j, k) = dot_lr(Qx{},Qy{});
-
-            %two parameters... not four... but they need to be compressed
-            %or the thing will blow up
             [Qxj,Qyj] = CompressData(Qx{j}, Qy{j}, tol);
-            % [Qxk,Qyk] = CompressData(Qx{k}, Qy{k}, tol);
-            % H(j, k) = dot_lr(Qx{j},Qy{j},Qx{k},Qy{k});
-            % H(j, k) = dot_lr(Qxj, Qyj, Qxk, Qyk);
             H(j, k) = dot_lr(Qxj,Qyj,Yx,Yy);
 
             %y = y - H(j, k) * Q(:, j);
 
-            %y will be a low rank vector calculated 
-            %the result will be two new Yx and Yy calculated from the above
-            %results
-            % Yx = [Yx, H(j,k)*Qx{k}];
-            % Yy = [Yy, -Qy{k}];
             Yx = [Yx, H(j,k)*Qx{j}];
             Yy = [Yy, -Qy{j}];
 
             [Yx,Yy] = CompressData(Yx,Yy,tol);
-
         end
 
         % Compute the next Hessenberg entry
@@ -225,7 +197,6 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
         
         normv = norm_lr(Yx,Yy);
         H(k + 1, k) = normv;
-
 
         % Break early if the norm is zero (linear dependence)
         if H(k + 1, k) == 0

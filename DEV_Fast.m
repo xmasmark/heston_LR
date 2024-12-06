@@ -116,8 +116,8 @@ UvHEClassicEulerIntegrated = HestonExplicitClassicXYEuler(params,K,r,q,Sm,Vm,T,0
 
 %UvHEClassicCNGMRS = HestonExplicitClassicCN_GMRS(params,K,r,q,Sm,Vm,T);
 
-iterations = 1;
-restart = 1;
+iterations = 2;
+restart = 2;
 
 UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,2, iterations, restart);
 
