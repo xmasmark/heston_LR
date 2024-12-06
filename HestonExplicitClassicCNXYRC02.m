@@ -134,7 +134,7 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T,mode, iterations, 
         max_iter = iterations;  % Maximum number of iterations
 
         %%x and y, old values, the initial guesses
-        [X, Y] = GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter);
+        [X, Y] = GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter, dt);
 
     end    
     U=X*Y';

@@ -1,4 +1,4 @@
-function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter)
+function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter, dt)
 
 
     %[BX,BY] = HestonMatVecBoundaries    (NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T)
@@ -44,8 +44,16 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
     [xl,yl] = HestonMatVec(x0,y0, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
     %residual = BX*BY' - xl*yl'; %%b-A*X 
 
-    residualX = [BX, -xl];
-    residualY = [BY, yl];
+    % residualX = [BX, -xl];
+    % residualY = [BY, yl];
+
+
+    residualX = [BX, -(1+dt*r/2)*x0, (dt/2)*xl];
+    residualY = [BY,             y0,         yl];
+
+
+
+
     beta = norm_lr(residualX,residualY);
 
     for iter = 1:max_iter
@@ -68,8 +76,13 @@ function [X_new, Y_new] = GMRES_XYv01(x,y, NS, NV, ds, dv, S, V, r, q, kappa, th
         %x = x+Q(:,1:restart)*y;
         %r = b-A*x;
         [Ax,Ay] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
-        residualX = [BX, -Ax];
-        residualY = [BY, Ay];
+
+        % residualX = [BX, -Ax];
+        % residualY = [BY, Ay];
+
+        residualX = [BX, -(1+dt*r/2)*x, (dt/2)*Ax];
+        residualY = [BY,             y,        Ay];
+        
 
         [residualX,residualY] = CompressData(residualX,residualY,tol);
 

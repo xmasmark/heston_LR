@@ -51,8 +51,12 @@ function [X_new, Y_new] = GMRES_XY_COMP(A, b, x0v, x, y, NS, NV, ds, dv, S, V, r
         %r = b-A*x;
 
         [Ax,Ay] = HestonMatVec(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
-        residualX = [BX, -Ax];
-        residualY = [BY,  Ay];
+        % residualX = [BX, -Ax];
+        % residualY = [BY,  Ay];
+
+        residualX = [BX, -(1+dt*r/2)*x, (dt/2)*Ax];
+        residualY = [BY,             y,        Ay];
+        
 
         [residualX,residualY] = CompressData(residualX, residualY, tol);
 
@@ -192,6 +196,14 @@ function [Qx, Qy, H] = arnoldi_process_low_rank(residualX, residualY, restart, N
         %y = A * Q(:, k);
 
         [Yx,Yy] = HestonMatVec(Qx{k},Qy{k}, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+
+        % 
+        % residualX = [BX, -(1+dt*r/2)*x, (dt/2)*Ax];
+        % residualY = [BY,             y,        Ay];
+
+        %change of sign because not residuals
+        Yx = [(1+dt*r/2)*Qx{k}, -(dt/2)*Yx];
+        Yy = [Qy{k}, Yy];
 
         % Gram-Schmidt orthogonalization
         for j = 1:k
