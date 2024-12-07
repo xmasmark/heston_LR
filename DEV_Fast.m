@@ -10,6 +10,7 @@ r = 0.02;
 q = 0.05;
 Mat = 0.15;
 
+
 % Heston parameters
 kappa =  1.5;
 theta =  0.04;
