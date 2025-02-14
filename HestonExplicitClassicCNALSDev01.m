@@ -109,6 +109,8 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
         % x = X;
         % y = Y;
 
+        [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+
         [AX,AY] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
 
@@ -119,7 +121,10 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
         %Right hand side vector components
         [BXc,BYc]=CompressData(FX, FY, epsilon);
         %the LHS are operators, not a matrix
-
+        %BXc-->bx
+        %BYc-->by
+        %?A
+        %?B
         % Set GMRES parameters
         % restart = 80;  % Restart after N iterations
         max_iter = iterations;  % Maximum number of iterations
@@ -131,7 +136,7 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
     U=X*Y';
 end
 
-function [X, Y] = ALSOptimization(x,y, FX, FY, BX, BY, epsilon)
+function [X, Y] = ALSOptimization(x, y, FX, FY, BX, BY, epsilon)
 % ALS stands for Alternating Linear Scheme
 % the concept is to find X and Y solutions as an iterative process
 % keeping one dependent variable (V1) fixed at each time and solving the
