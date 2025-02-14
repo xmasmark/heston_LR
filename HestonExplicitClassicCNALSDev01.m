@@ -142,7 +142,7 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
     U=X*Y';
 end
 
-function [X, Y] = ALSOptimization(x, y, FX, FY, BX, BY, epsilon)
+function [X, Y] = ALSOptimization(A, B, BXc, BYc, BX, BY, epsilon)
 % ALS stands for Alternating Linear Scheme
 % the concept is to find X and Y solutions as an iterative process
 % keeping one dependent variable (V1) fixed at each time and solving the
