@@ -1,4 +1,4 @@
-function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T, mode, iterations, restart)
+function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iterations, restart)
 
     %mode is to decide the system resolution:
     %0--> Euler
@@ -112,18 +112,9 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T, mode, iterations,
         [AX,AY] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
 
-        % % %half Euler step
-        % FX = [(1+r*dt/2)*x, (-dt/2)*AX, BX]; 
-        % FY = [           y,         AY, BY];
-
-        % %half Euler step
-        % FX = [(1-r*dt/2)*x,  (+dt/2)*AX,  (+dt/2)*BX]; 
-        % FY = [           y,          AY,          BY];
-        
         %half Euler step
-        FX = [(1-r*dt/2)*x, (dt/2)*AX, dt*BX]; 
-        FY = [           y,         AY, BY];
-
+        FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
+        FY = [           y,         AY,    BY];
 
         %Right hand side vector components
         [BXc,BYc]=CompressData(FX, FY, epsilon);
@@ -140,7 +131,17 @@ function U = HestonExplicitClassicCNXYRC02(params,K,r,q,S,V,T, mode, iterations,
     U=X*Y';
 end
 
+function [X, Y] = ALSOptimization(x,y, FX, FY, BX, BY, epsilon)
+% ALS stands for Alternating Linear Scheme
+% the concept is to find X and Y solutions as an iterative process
+% keeping one dependent variable (V1) fixed at each time and solving the
+% linear system on the other variable (V2), then substituting the result
+% and iterating on the first (V1)
+% the accuracy of the iteration needs to be assessed on the residuals
+% I would also add a parameter containing the max number of iterations
 
+
+end
 
 
 

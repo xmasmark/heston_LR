@@ -29,8 +29,8 @@ Tmin = 0;  Tmax = Mat;
 % nS = 79;        % Stock price
 % nV = 39;        % Volatility
 
-nS = 69;        % Stock price
-nV = 59;        % Volatility
+nS = 29;        % Stock price
+nV = 19;        % Volatility
 nT = 200;      % Maturity
 
 % The maturity time increment and grid
