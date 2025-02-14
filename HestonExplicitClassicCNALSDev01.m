@@ -110,8 +110,9 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
         % y = Y;
 
         [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+        [AX,AY] = LowRankMatVec(A,B,x,y);
 
-        [AX,AY] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+        %[AX,AY] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
 
         %half Euler step
@@ -130,7 +131,8 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
         max_iter = iterations;  % Maximum number of iterations
 
         %%x and y, old values, the initial guesses
-        [X, Y] = GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter, dt);
+        [X, Y] = GMRES_LowRankV01(x,y, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BX, BY, x0, y0, restart, tol, max_iter, dt);
+        %[X, Y] = GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter, dt);
 
     end    
     U=X*Y';
