@@ -128,7 +128,7 @@ UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,2, iteratio
 
 UvHEClassicCNXYdev = HestonExplicitClassicCNXYRC02(params,K,r,q,Sm,Vm,T,2, iterations, restart);
                      %HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iterations, restart)
-UvHEClassicCNALSdev = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T,2,iterations, restart);
+UvHEClassicCNALSdev = HestonExplicitClassicCNALSDev01(params,K,r,q,Sm,Vm,T,2,iterations, restart);
 
 %Suliko = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T);
 
