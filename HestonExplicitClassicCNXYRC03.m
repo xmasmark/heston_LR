@@ -111,10 +111,6 @@ function U = HestonExplicitClassicCNXYRC03(params,K,r,q,S,V,T, mode, iterations,
 
         [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         [AX,AY] = LowRankMatVec(A,B,x,y);
-
-        [AXold,AYold] = HestonMatVec(x,y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
-
-
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
 
         %half Euler step
