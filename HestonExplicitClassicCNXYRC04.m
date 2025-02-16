@@ -74,33 +74,26 @@ function U = HestonExplicitClassicCNXYRC04(params,K,r,q,S,V,T, mode, iterations,
     S2Matrix = diag(S.^2);
     VMatrix = diag(V);
 
+    d1sM = MDerivativeVM(NS, ds, 0, 1);
+    d2sM = MSecondDerivativePlusCVM(NS, ds, 0, 1);
+    
+    d1vM = MDerivativeVM(NV, dv, 1, 1);
+    d2vM = MSecondDerivativePlusCVM(NV, dv, 1, 1);
 
-        % % % % % % lhs_matrix = ((1+(dt*r/2))*eye(NS*NV) - (dt/2)*AK);  
-        % % % % % % rhs_vector = ((1-(dt*r/2))*U_vec + (dt/2)*Av) + dt*Bv;
-        % % % % % % 
-        % % % % % % % Solve for U_vec at the next time step
-        % % % % % % if mode == 0
-        % % % % % %     U_vec = (1-dt*r)*U_vec+dt*(Av + Bv);
-        % % % % % % end
-        % % % % % % if mode == 1
-        % % % % % %     U_vec = lhs_matrix \ rhs_vector;
-        % % % % % % end
-        % % % % % % if mode == 2
-        % % % % % %     % Set initial guess for GMRES
-        % % % % % %     x0 = U_vec;  % The current solution vector
-        % % % % % % 
-        % % % % % %     % Set GMRES parameters
-        % % % % % %     restart = 80;  % Restart after 20 iterations (example value)
-        % % % % % %     tol = 1e-5;  % Tolerance for convergence
-        % % % % % %     max_iter = 100;  % Maximum number of iterations
-        % % % % % % 
-        % % % % % %     % Solve using GMRES
-        % % % % % %     warning('off', 'all')
-        % % % % % %     U_vec = restarted_gmres(lhs_matrix, rhs_vector, x0, restart, tol, max_iter);
-        % % % % % %     warning('on', 'all')
-        % % % % % % end
+    IS = eye(NS);
+    IV = eye(NV);
 
-
+    A1KX = (r-q)*SMatrix*d1sM;
+    A1KY = IV;
+    A2KX = 0.5*S2Matrix*d2sM;
+    A2KY = VMatrix;
+    A3KX = IS;
+    A3KY = (kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix)* d1vM;
+    A4KX = IS;
+    A4KY = (0.5 * sigma^2)*VMatrix * d2vM;
+    A5KX = SMatrix*d1sM;
+    A5KY = rho * sigma * (VMatrix*d1vM);
+    
 
     for t = 1:NT-1
         tol = 1e-5;  % Tolerance for convergence and compression
