@@ -108,7 +108,7 @@ epsilon = 0.00001;
 
 %HestonExplicitClassic(params,K,r,q,S,V,T)
 %UvHEClassicEuler = HestonExplicitClassic(params,K,r,q,Sm,Vm,T);
-UvHEClassicEulerIntegrated = HestonExplicitClassicXYEuler(params,K,r,q,Sm,Vm,T,0);
+% UvHEClassicEulerIntegrated = HestonExplicitClassicXYEuler(params,K,r,q,Sm,Vm,T,0);
 
 %HestonExplicitClassicCNRC01
 %UvHEClassicCN = HestonExplicitClassicCN(params,K,r,q,Sm,Vm,T);
@@ -118,10 +118,10 @@ UvHEClassicEulerIntegrated = HestonExplicitClassicXYEuler(params,K,r,q,Sm,Vm,T,0
 
 iterations = 10;
 restart = 3;
-
-tic
-UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,1,iterations,restart);
-timeElapsed = toc;
+% 
+% tic
+% UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,1,iterations,restart);
+% timeElapsed = toc;
 
 
 
@@ -164,11 +164,11 @@ V0 = 0.05412;
 
 %UniformPriceHEClassicEuler = interp2(Vm,Sm,UvHEClassicEuler,V0,S0);
 
-UniformPriceHEClassicEulerIntegrated = interp2(Vm,Sm,UvHEClassicEulerIntegrated,V0,S0);
+% UniformPriceHEClassicEulerIntegrated = interp2(Vm,Sm,UvHEClassicEulerIntegrated,V0,S0);
 
 %UniformPriceHEClassicCN = interp2(Vm,Sm,UvHEClassicCN,V0,S0);
 
-UniformPriceHEClassicCNGMRS = interp2(Vm,Sm,UvHEClassicCNGMRS,V0,S0);
+% UniformPriceHEClassicCNGMRS = interp2(Vm,Sm,UvHEClassicCNGMRS,V0,S0);
 
 UvHEClassicCNXYdevPrice = interp2(Vm,Sm,UvHEClassicCNXYdev,V0,S0);
 UvHEClassicCNXYLeanDevPrice = interp2(Vm,Sm,UvHEClassicCNXYLeanDev,V0,S0);
@@ -213,9 +213,9 @@ ClosedPrice = HestonPriceGaussLaguerre(PutCall,S0,K,Mat,r,q,kappa,theta,sigma,la
 % UvHestonEulerError = UvHestonEulerPrice - ClosedPrice;
 % UvHestonCNError = UvHestonCNPrice - ClosedPrice;
 % UvHEClassicEulerError = UniformPriceHEClassicEuler - ClosedPrice;
-UvHEClassicEulerIntegratedError = UniformPriceHEClassicEulerIntegrated - ClosedPrice;
+% UvHEClassicEulerIntegratedError = UniformPriceHEClassicEulerIntegrated - ClosedPrice;
 % UvHEClassicCNError = UniformPriceHEClassicCN - ClosedPrice;
-UvHEClassicCNGMRSError = UniformPriceHEClassicCNGMRS - ClosedPrice;
+% UvHEClassicCNGMRSError = UniformPriceHEClassicCNGMRS - ClosedPrice;
 UvHEClassicCNXYdevError = UvHEClassicCNXYdevPrice - ClosedPrice;
 UvHEClassicCNXYLeanDevError = UvHEClassicCNXYLeanDevPrice - ClosedPrice;
 
