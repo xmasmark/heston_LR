@@ -110,9 +110,6 @@ function U = HestonExplicitClassicCNXYRC04(params,K,r,q,S,V,T, mode, iterations,
     b2x(NS)=(1/ds);
     b2y = ones(NV,1);
     
-    discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
-
-    b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
     b3y = zeros(NV,2); %2 columns because this is rank 2
     b3y(1,1)=1;
     b3y(NV,2)=1;
@@ -133,6 +130,10 @@ function U = HestonExplicitClassicCNXYRC04(params,K,r,q,S,V,T, mode, iterations,
     b5y = VMatrix'*b5y;
 
     for t = 1:NT-1
+
+        discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
+        b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
+       
         tol = 1e-5;  % Tolerance for convergence and compression
 
         [x,y]=CompressData(X,Y,tol);
