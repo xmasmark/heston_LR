@@ -244,7 +244,7 @@ fprintf('Closed Form                                %10.4f              \n', Clo
 % fprintf('Heston Classic CN                %10.4f    %5.2f\n', UniformPriceHEClassicCN,UvHEClassicCNError)
 % fprintf('Heston Classic CN GMRS vectorised          %10.4f        %5.2f       %10.4f\n', UniformPriceHEClassicCNGMRS,UvHEClassicCNGMRSError, timeElapsed)
 %fprintf('Heston Classic CN Backslash vectorised     %10.4f        %5.2f       %10.4f\n', UniformPriceHEClassicCNGMRS,UvHEClassicCNGMRSError, timeElapsed)
-fprintf('Heston Classic CN GMRS Low Rank Super Dima %10.4f        %5.2f       %10.4f\n\n', UvHEClassicCNXYdevPrice,UvHEClassicCNXYdevError, timeElapsedXY)
+fprintf('Heston Classic CN GMRS Low Rank Super Dima %10.4f        %5.2f       %10.4f\n', UvHEClassicCNXYdevPrice,UvHEClassicCNXYdevError, timeElapsedXY)
 fprintf('Heston Classic CN GMRS Low Rank Lean       %10.4f        %5.2f       %10.4f\n\n', UvHEClassicCNXYLeanDevPrice,UvHEClassicCNXYLeanDevError, timeElapsedLean)
 fprintf('Dmitry is the BEST                                                         \n')
 fprintf('-----------------------------------------------------------------------------------\n')
