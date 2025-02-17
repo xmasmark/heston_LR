@@ -109,7 +109,7 @@ epsilon = 0.00001;
 
 %HestonExplicitClassic(params,K,r,q,S,V,T)
 %UvHEClassicEuler = HestonExplicitClassic(params,K,r,q,Sm,Vm,T);
-UvHEClassicEulerIntegrated = HestonExplicitClassicXYEuler(params,K,r,q,Sm,Vm,T,0);
+%UvHEClassicEulerIntegrated = HestonExplicitClassicXYEuler(params,K,r,q,Sm,Vm,T,0);
 
 %HestonExplicitClassicCNRC01
 %UvHEClassicCN = HestonExplicitClassicCN(params,K,r,q,Sm,Vm,T);

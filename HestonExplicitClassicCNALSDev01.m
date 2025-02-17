@@ -78,8 +78,6 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
         tol = 1e-5;  % Tolerance for convergence and compression
 
         [x,y]=CompressData(X,Y,tol);
-        % x = X;
-        % y = Y;
 
         [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         [AX,AY] = LowRankMatVec(A,B,x,y);
@@ -92,6 +90,7 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
 
         %Right hand side vector components
         [BXc,BYc]=CompressData(FX, FY, epsilon);
+
         %the LHS are operators, not a matrix
         %BXc-->bx
         %BYc-->by
@@ -102,12 +101,12 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
         max_iter = iterations;  % Maximum number of iterations
 
         [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
+        [xALS,yALX]=ALSOptimization(A,B,x,y);
     end    
     U=X*Y';
 end
 
-function [X, Y] = ALSOptimization(A, B, BXc, BYc, BX, BY, epsilon)
-% ALS stands for Alternating Linear Scheme
+% ALS stands for Alternating Linear Scheme  
 % the concept is to find X and Y solutions as an iterative process
 % keeping one dependent variable (V1) fixed at each time and solving the
 % linear system on the other variable (V2), then substituting the result
@@ -115,8 +114,56 @@ function [X, Y] = ALSOptimization(A, B, BXc, BYc, BX, BY, epsilon)
 % the accuracy of the iteration needs to be assessed on the residuals
 % I would also add a parameter containing the max number of iterations
 
+function [X, Y] = ALSOptimization(A, B, x, y, epsilon)
+    
+    %solving for X
+    YB = LowRankMatVecSingle(B,y);
+    YBY=(YB)'*y; %the result is a vector with length R.
+
 
 end
 
+function [P] = LowRankMatVecSingle(M,LR)
+
+    szA = size(M);
+
+    P = [];
+
+    for n = 1:szA(3)
+        P=[P,M(:,:,n)*LR];
+    end
+end
+
+% function [xl,yl] = LowRankMatVec(A,B,x,y)
+% 
+%     szA = size(A);
+%     szB = size(B);
+% 
+%     xl = [];
+%     yl = [];
+% 
+%     for n = 1:szA(3)
+%         xl=[xl,A(:,:,n)*x];
+%     end
+% 
+%     for n = 1:szB(3)
+%         yl=[yl,B(:,:,n)*y];
+%     end
+% 
+%     % 
+%     % X1 = A1KX*x; %first slice of A A(:,:,1)
+%     % Y1 = A1KY*y; %first slice of B B(:,:,1)
+%     % X2 = A2KX*x;
+%     % Y2 = A2KY*y;
+%     % X3 = A3KX*x;
+%     % Y3 = A3KY*y;
+%     % X4 = A4KX*x;
+%     % Y4 = A4KY*y;
+%     % X5 = A5KX*x;
+%     % Y5 = A5KY*y;
+%     % 
+%     % xl = [X1,X2,X3,X4,X5];
+%     % yl = [Y1,Y2,Y3,Y4,Y5];
+% end
 
 
