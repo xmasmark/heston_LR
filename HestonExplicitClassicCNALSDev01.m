@@ -146,7 +146,16 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     b_hat = BXc*Y_BYc';
 
     %U_vec = lhs_matrix \ rhs_vector;
-    %X_Solution = A_hat \ b_hat; %probably I need to reshape
+    %Y_Opt = A_hat \ b_hat; %probably I need to reshape because as it
+    %is it doesn't work, but let's assume I got an Yopt as a result and now
+    %I continue with Y
+    Y_Opt = y;
+
+    XA =LowRankMatVecStacked(A,x);
+    XAX =LowRankMatVecStacked(XA,x);
+    YBo =LowRankMatVecStacked(B,Y_Opt);
+    %reshape
+    %create the new A_hat and b_hat...
 
     X=x;
     Y=y;
