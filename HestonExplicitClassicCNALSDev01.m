@@ -124,6 +124,28 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     %right hand side of CN Y*BY*BX
     %YBY=(YB)'*y; %the result is a vector with length R.
 
+    Y_BYc = y'*BYc;
+
+
+    % % % OK, A(Ns,Ns,R)  YBY(r,r,R)
+    % % % A = reshape(A,[Ns*Ns, R]);
+    % % % YBY = reshape(YBY,[r*r,R]);
+    % % % Ahat = A*YBY';
+    % % % Ahat = reshape(Ahat,[Ns,Ns,r,r]);
+
+    szA = size(A);
+    AR = reshape(A,szA(1)*szA(1),szA(3));
+    szB =size(YBY);
+    YBYR = reshape(YBY,szB(1)*szB(2),szB(3));
+
+    ah = AR*YBYR';
+    %szah = size(ah);
+    sx=size(x);
+    r = sx(2);
+    A_hat = reshape(ah,szA(1),szA(1),r,r);
+
+    b_hat = BXc*Y_BYc';
+
     X=x;
     Y=y;
 
