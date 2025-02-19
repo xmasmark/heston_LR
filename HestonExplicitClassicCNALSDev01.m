@@ -126,7 +126,6 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
 
     Y_BYc = y'*BYc;
 
-
     % % % OK, A(Ns,Ns,R)  YBY(r,r,R)
     % % % A = reshape(A,[Ns*Ns, R]);
     % % % YBY = reshape(YBY,[r*r,R]);
@@ -145,6 +144,9 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     A_hat = reshape(ah,szA(1),szA(1),r,r);
 
     b_hat = BXc*Y_BYc';
+
+    %U_vec = lhs_matrix \ rhs_vector;
+    %X_Solution = A_hat \ b_hat; %probably I need to reshape
 
     X=x;
     Y=y;
