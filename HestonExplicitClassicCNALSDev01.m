@@ -101,7 +101,8 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
         max_iter = iterations;  % Maximum number of iterations
 
         [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
-        [xALS,yALX]=ALSOptimization(A,B,x,y);
+
+        [xALS,yALX]=ALSOptimization(A, B, x, y, BXc, BYc, epsilon);
     end    
     U=X*Y';
 end
@@ -114,21 +115,38 @@ end
 % the accuracy of the iteration needs to be assessed on the residuals
 % I would also add a parameter containing the max number of iterations
 
-function [X, Y] = ALSOptimization(A, B, x, y, epsilon)
+function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     
     %solving for X
-    YB = LowRankMatVecSingle(B,y);
-    YBY=(YB)'*y; %the result is a vector with length R.
+    %left hand side part of CN also called Y*B*Y in the notes
+    YB =LowRankMatVecStacked(B,y);
+    YBY =LowRankMatVecStacked(YB,y);
+    %right hand side of CN Y*BY*BX
+    %YBY=(YB)'*y; %the result is a vector with length R.
 
+    X=x;
+    Y=y;
 
 end
 
-function [P] = LowRankMatVecSingle(M,LR)
-
+%this should return a 3d structure
+%on one side there is the operator M, on the other side the low rank
+%structure LR
+%the operator M is composed by R layers, one layer for each
+%operator component so the result of this should be R new layers where the
+%operator has worked each of its components on the low rank structure
+function [P] = LowRankMatVecStacked(M,LR)
     szA = size(M);
-
     P = [];
+    for n = 1:szA(3)
+        P(:,:,n)=(LR'*M(:,:,n))';
+    end
+end
 
+
+function [P] = LowRankMatVecSingle(M,LR)
+    szA = size(M);
+    P = [];
     for n = 1:szA(3)
         P=[P,M(:,:,n)*LR];
     end
