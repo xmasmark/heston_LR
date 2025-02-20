@@ -124,7 +124,6 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     %right hand side of CN Y*BY*BX
     %YBY=(YB)'*y; %the result is a vector with length R.
 
-    Y_BYc = y'*BYc;
 
     % % % OK, A(Ns,Ns,R)  YBY(r,r,R)
     % % % A = reshape(A,[Ns*Ns, R]);
@@ -143,6 +142,7 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     r = sx(2);
     A_hat = reshape(ah,szA(1),szA(1),r,r);
 
+    Y_BYc = y'*BYc;
     b_hat = BXc*Y_BYc';
 
     %U_vec = lhs_matrix \ rhs_vector;
@@ -153,9 +153,18 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
 
     XA =LowRankMatVecStacked(A,x);
     XAX =LowRankMatVecStacked(XA,x);
-    YBo =LowRankMatVecStacked(B,Y_Opt);
+    Y_optB =LowRankMatVecStacked(B,Y_Opt);
     %reshape
+    szXAX =size(XAX);
+    XAXR = reshape(XAX,szXAX(1)*szXAX(2),szXAX(3));
+    szY_optB=size(Y_optB);
+    Y_optBR=reshape(Y_optB,szY_optB(1)*szY_optB(2),szY_optB(3));
+
     %create the new A_hat and b_hat...
+    ahx=XAXR*Y_optBR';
+
+    bhatx=x'*BXc*BYc';
+
 
     X=x;
     Y=y;
