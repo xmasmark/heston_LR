@@ -148,7 +148,8 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     ahs = size(A_hat);
 
     dim = ndims(A_hat);
-    
+
+    %given the values I get, the following step is definitely wrong
     if dim < 3
         A_hat_matrix = A_hat;
         b_hat_vector = b_hat;
@@ -157,10 +158,8 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
         A_hat_matrix = reshape(A_hat,ahs(1)*ahs(3),ahs(1)*ahs(3));
         b_hat_vector = reshape(b_hat,ahs(1)*ahs(3),1);
     end
-
-    X_Opt = A_hat_matrix \ b_hat_vector; %probably I need to reshape because as it
-    %is it doesn't work, but let's assume I got an Yopt as a result and now
-    %I continue with Y
+   
+    X_Opt = A_hat_matrix \ b_hat_vector;
 
     %solving for Y
     if dim < 3
@@ -169,14 +168,20 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     if dim > 3
         X_OptR = reshape(X_Opt,ahs(1),ahs(3));
     end
+   
     XA =LowRankMatVecStacked(A,X_OptR);
     XAX =LowRankMatVecStacked(XA,X_OptR);
-    Y_optB =LowRankMatVecStacked(B,y);
+    YB =LowRankMatVecStacked(B,y);
+    %PROBLEM HERE: I need to connect XAX and BY and then the AHat matrix is
+    %calculated
+
+    bHat=X_OptR'*BXc*BYc';
+
     %reshape
     szXAX =size(XAX);
     XAXR = reshape(XAX,szXAX(1)*szXAX(2),szXAX(3));
-    szY_optB=size(Y_optB);
-    Y_optBR=reshape(Y_optB,szY_optB(1)*szY_optB(2),szY_optB(3));
+    szY_optB=size(YB);
+    Y_optBR=reshape(YB,szY_optB(1)*szY_optB(2),szY_optB(3));
 
     % XA =LowRankMatVecStacked(A,x);
     % XAX =LowRankMatVecStacked(XA,x);
