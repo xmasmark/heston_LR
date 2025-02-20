@@ -145,20 +145,47 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     Y_BYc = y'*BYc;
     b_hat = BXc*Y_BYc';
 
-    %U_vec = lhs_matrix \ rhs_vector;
-    %Y_Opt = A_hat \ b_hat; %probably I need to reshape because as it
+    ahs = size(A_hat);
+
+    dim = ndims(A_hat);
+    
+    if dim < 3
+        A_hat_matrix = A_hat;
+        b_hat_vector = b_hat;
+    end
+    if dim > 3
+        A_hat_matrix = reshape(A_hat,ahs(1)*ahs(3),ahs(1)*ahs(3));
+        b_hat_vector = reshape(b_hat,ahs(1)*ahs(3),1);
+    end
+
+    X_Opt = A_hat_matrix \ b_hat_vector; %probably I need to reshape because as it
     %is it doesn't work, but let's assume I got an Yopt as a result and now
     %I continue with Y
-    Y_Opt = y;
 
-    XA =LowRankMatVecStacked(A,x);
-    XAX =LowRankMatVecStacked(XA,x);
-    Y_optB =LowRankMatVecStacked(B,Y_Opt);
+    %solving for Y
+    if dim < 3
+        X_OptR = X_Opt;
+    end
+    if dim > 3
+        X_OptR = reshape(X_Opt,ahs(1),ahs(3));
+    end
+    XA =LowRankMatVecStacked(A,X_OptR);
+    XAX =LowRankMatVecStacked(XA,X_OptR);
+    Y_optB =LowRankMatVecStacked(B,y);
     %reshape
     szXAX =size(XAX);
     XAXR = reshape(XAX,szXAX(1)*szXAX(2),szXAX(3));
     szY_optB=size(Y_optB);
     Y_optBR=reshape(Y_optB,szY_optB(1)*szY_optB(2),szY_optB(3));
+
+    % XA =LowRankMatVecStacked(A,x);
+    % XAX =LowRankMatVecStacked(XA,x);
+    % Y_optB =LowRankMatVecStacked(B,Y_Opt);
+    % %reshape
+    % szXAX =size(XAX);
+    % XAXR = reshape(XAX,szXAX(1)*szXAX(2),szXAX(3));
+    % szY_optB=size(Y_optB);
+    % Y_optBR=reshape(Y_optB,szY_optB(1)*szY_optB(2),szY_optB(3));
 
     %create the new A_hat and b_hat...
     ahx=XAXR*Y_optBR';
