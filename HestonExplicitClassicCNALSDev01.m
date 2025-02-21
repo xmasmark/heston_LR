@@ -134,16 +134,26 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
 
     %change the sizes into NS, NV, r and R
     %remove subroutines
+
     szA = size(A);
-    AR = reshape(A,szA(1)*szA(1),szA(3));
+    NS = szA(1);
+    R = szA(3);
+    sx=size(x);
+    r = sx(2);
+
+    sizeB=size(B);
+    NV = sizeB(1);
+
+    %AR = reshape(A,szA(1)*szA(1),szA(3));
+    AR = reshape(A,NS*NS,R);
     szB =size(YBY);
-    YBYR = reshape(YBY,szB(1)*szB(2),szB(3));
+    %YBYR = reshape(YBY,szB(1)*szB(2),szB(3));
+    YBYR = reshape(YBY,r*r,R);
 
     ah = AR*YBYR';
     %szah = size(ah);
-    sx=size(x);
-    r = sx(2);
-    A_hat = reshape(ah,szA(1),szA(1),r,r);
+    %A_hat = reshape(ah,szA(1),szA(1),r,r);
+    A_hat = reshape(ah,NS,NS,r,r);
 
     Y_BYc = y'*BYc;
     b_hat = BXc*Y_BYc';
@@ -161,8 +171,10 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     if dim > 3
         %A_hat_matrix = reshape(A_hat,ahs(1)*ahs(3),ahs(1)*ahs(3));
         A_hatP = permute(A_hat,[1,3,2,4]);
-        A_hat_matrix = reshape(A_hatP,ahs(1)*ahs(3),ahs(1)*ahs(3));
-        b_hat_vector = reshape(b_hat,ahs(1)*ahs(3),1);
+        %A_hat_matrix = reshape(A_hatP,ahs(1)*ahs(3),ahs(1)*ahs(3));
+        A_hat_matrix = reshape(A_hatP,NS*r,NS*r);
+        %b_hat_vector = reshape(b_hat,ahs(1)*ahs(3),1);
+        b_hat_vector = reshape(b_hat,NS*r,1);
     end
    
     X_Opt = A_hat_matrix \ b_hat_vector;
@@ -174,12 +186,23 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     if dim > 3
         X_OptR = reshape(X_Opt,ahs(1),ahs(3));
     end
-   
+
+    % AR = reshape(A,szA(1)*szA(1),szA(3));
+    % szB =size(YBY);
+    % YBYR = reshape(YBY,szB(1)*szB(2),szB(3));
+
+
     XA =LowRankMatVecStacked(A,X_OptR);
     XAX =LowRankMatVecStacked(XA,X_OptR);
     YB =LowRankMatVecStacked(B,y);
     %PROBLEM HERE: I need to connect XAX and BY and then the AHat matrix is
     %calculated
+    %ah = AR*YBYR';
+    XAXR = reshape(XAX,r*r,R);
+    YBR = reshape(YB,NV*r,R);
+
+    ahY=YBR*XAXR';
+    %A_hatY = reshape(ahY,NV,NV,r,r);
 
     bHat=X_OptR'*BXc*BYc';
 
