@@ -125,12 +125,15 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     %YBY=(YB)'*y; %the result is a vector with length R.
 
 
+
     % % % OK, A(Ns,Ns,R)  YBY(r,r,R)
     % % % A = reshape(A,[Ns*Ns, R]);
     % % % YBY = reshape(YBY,[r*r,R]);
     % % % Ahat = A*YBY';
     % % % Ahat = reshape(Ahat,[Ns,Ns,r,r]);
 
+    %change the sizes into NS, NV, r and R
+    %remove subroutines
     szA = size(A);
     AR = reshape(A,szA(1)*szA(1),szA(3));
     szB =size(YBY);
@@ -155,7 +158,9 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
         b_hat_vector = b_hat;
     end
     if dim > 3
-        A_hat_matrix = reshape(A_hat,ahs(1)*ahs(3),ahs(1)*ahs(3));
+        %A_hat_matrix = reshape(A_hat,ahs(1)*ahs(3),ahs(1)*ahs(3));
+        A_hatP = permute(A_hat,[1,3,2,4]);
+        A_hat_matrix = reshape(A_hatP,ahs(1)*ahs(3),ahs(1)*ahs(3));
         b_hat_vector = reshape(b_hat,ahs(1)*ahs(3),1);
     end
    
@@ -197,6 +202,7 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
 
     bhatx=x'*BXc*BYc';
 
+    %calculation of residuals to control the progress
 
     X=x;
     Y=y;
