@@ -157,6 +157,7 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
         A_hat_matrix = A_hat;
         b_hat_vector = b_hat;
     end
+    
     if dim > 3
         %A_hat_matrix = reshape(A_hat,ahs(1)*ahs(3),ahs(1)*ahs(3));
         A_hatP = permute(A_hat,[1,3,2,4]);
