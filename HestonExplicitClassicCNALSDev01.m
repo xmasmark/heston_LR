@@ -111,7 +111,9 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
 
         [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
 
-        [xALS,yALS]=ALSOptimization(A, B, x, y, BXc, BYc, epsilon);
+        [xALS,yALS]=ALSOptimizationW(A, B, x, y, BXc, BYc, epsilon,max_iter);
+
+        
     end    
     %U=X*Y';
     U= xALS*yALS';
@@ -124,6 +126,155 @@ end
 % and iterating on the first (V1)
 % the accuracy of the iteration needs to be assessed on the residuals
 % I would also add a parameter containing the max number of iterations
+
+function [X, Y] = ALSOptimizationW(A, B, x, y, BXc, BYc, epsilon, max_iter)
+
+    residual = ALSResidualCalculation(A, B, x, y, BXc, BYc, epsilon);
+
+    x_opt = x;
+    y_opt = y;
+    n = 1;
+
+    while abs(residual) > epsilon 
+        [x_opt, y_opt] = ALSOptimizationV02(A, B, x_opt, y_opt, BXc, BYc, epsilon);
+        residual = ALSResidualCalculation(A, B, x_opt, y_opt, BXc, BYc, epsilon);
+        n = n+1;
+        if n>max_iter
+            break
+        end
+    end
+
+    X=x_opt;
+    Y = y_opt;
+    %[X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon);
+end
+
+function residual = ALSResidualCalculation(A, B, x, y, BXc, BYc, epsilon)
+
+    szA = size(A);
+    R = szA(3);
+    sx=size(x);
+    r = sx(2);
+
+    YB =LowRankMatVecStacked(B,y);
+    YBY =LowRankMatVecStacked(YB,y);
+    XA =LowRankMatVecStacked(A,x);
+    XAX =LowRankMatVecStacked(XA,x);
+
+    xv = reshape(YBY,r*r*R,1);
+    yv = reshape(XAX,r*r*R,1);
+
+    one_side = xv'*yv;
+
+    xBx = x'*BXc;
+    yBYc = y'*BYc;
+
+    other_side = xBx(:)*(yBYc(:))';
+
+    residual = one_side - other_side;
+end
+
+
+
+function [X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon)
+    
+    %solving for X
+    %left hand side part of CN also called Y*B*Y in the notes
+    YB =LowRankMatVecStacked(B,y);
+    YBY =LowRankMatVecStacked(YB,y);
+    %right hand side of CN Y*BY*BX
+    %YBY=(YB)'*y; %the result is a vector with length R.
+
+    % % % OK, A(Ns,Ns,R)  YBY(r,r,R)
+    % % % A = reshape(A,[Ns*Ns, R]);
+    % % % YBY = reshape(YBY,[r*r,R]);
+    % % % Ahat = A*YBY';
+    % % % Ahat = reshape(Ahat,[Ns,Ns,r,r]);
+
+    %change the sizes into NS, NV, r and R
+    %remove subroutines
+
+    szA = size(A);
+    NS = szA(1);
+    R = szA(3);
+    sx=size(x);
+    r = sx(2);
+
+    sizeB=size(B);
+    NV = sizeB(1);
+
+    %AR = reshape(A,szA(1)*szA(1),szA(3));
+    AR = reshape(A,NS*NS,R);
+    %szB =size(YBY);
+    YBYR = reshape(YBY,r*r,R);
+
+    ah = AR*YBYR';
+    A_hat = reshape(ah,NS,NS,r,r);
+
+    Y_BYc = y'*BYc;
+    b_hat = BXc*Y_BYc';
+
+    ahs = size(A_hat);
+
+    dim = ndims(A_hat);
+
+    %given the values I get, the following step is definitely wrong
+    if dim < 3
+        A_hat_matrix = A_hat;
+        b_hat_vector = b_hat;
+    end
+    
+    if dim > 3
+        A_hatP = permute(A_hat,[1,3,2,4]);
+        A_hat_matrix = reshape(A_hatP,NS*r,NS*r);
+        b_hat_vector = reshape(b_hat,NS*r,1);
+    end
+   
+    X_Opt = A_hat_matrix \ b_hat_vector;
+
+    %solving for Y
+    if dim < 3
+        X_OptR = X_Opt;
+    end
+    if dim > 3
+        X_OptR = reshape(X_Opt,ahs(1),ahs(3));
+    end
+
+    XA =LowRankMatVecStacked(A,X_OptR);
+    XAX =LowRankMatVecStacked(XA,X_OptR);
+    BR = reshape(B,NV*NV,R);
+    XAXR = reshape(XAX,r*r,R);
+
+    ahY = BR*XAXR';
+    A_hatY = reshape(ahY,NV,NV,r,r);
+
+    X_BXc=X_OptR'*BXc;
+    b_hatY_vector = X_BXc*BYc';
+
+    if r>1
+        %bHat=X_OptR'*BXc*BYc';
+        A_hatYP = permute(A_hatY,[1,3,2,4]);
+        A_hatY_matrix = reshape(A_hatYP,NV*r,NV*r);
+        b_hatY_vector = reshape(b_hatY_vector,NV*r,1);
+        Y_Opt = A_hatY_matrix \ b_hatY_vector;
+    end
+    if r==1
+       %A_hatY_matrix = reshape(A_hatY,NV*r,NV*r);
+       Y_Opt = A_hatY \ b_hatY_vector';
+    end
+   
+    X_Opt = reshape(X_Opt,NS,r);
+    Y_Opt = reshape(Y_Opt,NV,r);
+
+    %calculation of residuals to control the progress
+
+    X=X_Opt;
+    Y=Y_Opt;
+
+end
+
+
+
 
 function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     
@@ -266,6 +417,7 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     Y=Y_Opt;
 
 end
+
 
 %this should return a 3d structure
 %on one side there is the operator M, on the other side the low rank
