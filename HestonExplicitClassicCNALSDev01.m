@@ -135,8 +135,10 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BXc, BYc, epsilon, max_iter)
     y_opt = y;
     n = 1;
 
+    [x_opt, y_opt] = ALSOptimizationV02(A, B, x_opt, y_opt, BXc, BYc, epsilon);
+
     while abs(residual) > epsilon 
-        [x_opt, y_opt] = ALSOptimizationV02(A, B, x_opt, y_opt, BXc, BYc, epsilon);
+        [x_opt, y_opt] = ALSOptimizationV02(A, B, x_opt, y_opt, BXc, BYc, epsilon, max_iter);
         residual = ALSResidualCalculation(A, B, x_opt, y_opt, BXc, BYc, epsilon);
         n = n+1;
         if n>max_iter
@@ -179,7 +181,7 @@ end
 
 
 
-function [X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon)
+function [X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon, max_iter)
     
     %solving for X
     %left hand side part of CN also called Y*B*Y in the notes
@@ -217,30 +219,27 @@ function [X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon)
     Y_BYc = y'*BYc;
     b_hat = BXc*Y_BYc';
 
-    ahs = size(A_hat);
-
-    dim = ndims(A_hat);
-
     %given the values I get, the following step is definitely wrong
-    if dim < 3
+    if r == 1
         A_hat_matrix = A_hat;
         b_hat_vector = b_hat;
     end
-    
-    if dim > 3
+    if r > 2
+        %A_hat -- sizes are NS, NS, r and r
         A_hatP = permute(A_hat,[1,3,2,4]);
         A_hat_matrix = reshape(A_hatP,NS*r,NS*r);
         b_hat_vector = reshape(b_hat,NS*r,1);
     end
    
-    X_Opt = A_hat_matrix \ b_hat_vector;
+    X_Opt = gmres_simple(A_hat_matrix, b_hat_vector, epsilon, max_iter)
+    %X_Opt = A_hat_matrix \ b_hat_vector;
 
     %solving for Y
-    if dim < 3
+    if r == 1
         X_OptR = X_Opt;
     end
-    if dim > 3
-        X_OptR = reshape(X_Opt,ahs(1),ahs(3));
+    if r > 1
+        X_OptR = reshape(X_Opt,NS,r);
     end
 
     XA =LowRankMatVecStacked(A,X_OptR);
@@ -256,15 +255,21 @@ function [X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon)
 
     if r>1
         %bHat=X_OptR'*BXc*BYc';
-        A_hatYP = permute(A_hatY,[1,3,2,4]);
+        %A_hatY -- sizes are NV, NV, r and r
+        %A_hatYP = permute(A_hatY,[1,3,2,4]);
+        A_hatYP = permute(A_hatY,[2,4,1,3]);
         A_hatY_matrix = reshape(A_hatYP,NV*r,NV*r);
         b_hatY_vector = reshape(b_hatY_vector,NV*r,1);
-        Y_Opt = A_hatY_matrix \ b_hatY_vector;
+        %Y_Opt = A_hatY_matrix \ b_hatY_vector;
     end
     if r==1
        %A_hatY_matrix = reshape(A_hatY,NV*r,NV*r);
+       A_hatY_matrix = A_hatY;
        Y_Opt = A_hatY \ b_hatY_vector';
     end
+
+    %Y_Opt = A_hatY_matrix \ b_hatY_vector;
+    Y_Opt = gmres_simple(A_hatY_matrix, b_hatY_vector, epsilon, max_iter)
    
     X_Opt = reshape(X_Opt,NS,r);
     Y_Opt = reshape(Y_Opt,NV,r);
