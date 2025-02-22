@@ -70,17 +70,22 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
 	    Y(v)=1;
     end
     
-    SMatrix = diag(S);
-    S2Matrix = diag(S.^2);
-    VMatrix = diag(V);
+    % SMatrix = diag(S);
+    % S2Matrix = diag(S.^2);
+    % VMatrix = diag(V);
+
+    xALS = X;
+    yALS = Y;
 
     for t = 1:NT-1
         tol = 1e-5;  % Tolerance for convergence and compression
 
         [x,y]=CompressData(X,Y,tol);
+        [xALS,yALS]=CompressData(xALS,yALS,tol);
 
         [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         [AX,AY] = LowRankMatVec(A,B,x,y);
+        [AXALS,AYALS] = LowRankMatVec(A,B,xALS,yALS);
         
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
 
@@ -88,8 +93,12 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
         FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
         FY = [           y,         AY,    BY];
 
+        FXALS = [(1-r*dt/2)*xALS,  (dt/2)*AXALS, dt*BX]; 
+        FYALS = [           yALS,         AYALS,    BY];
+        
         %Right hand side vector components
         [BXc,BYc]=CompressData(FX, FY, epsilon);
+        [BXcALS,BYcALS]=CompressData(FXALS, FYALS, epsilon);
 
         %the LHS are operators, not a matrix
         %BXc-->bx
@@ -102,9 +111,10 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
 
         [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
 
-        [xALS,yALX]=ALSOptimization(A, B, x, y, BXc, BYc, epsilon);
+        [xALS,yALS]=ALSOptimization(A, B, x, y, BXc, BYc, epsilon);
     end    
-    U=X*Y';
+    %U=X*Y';
+    U= xALS*yALS';
 end
 
 % ALS stands for Alternating Linear Scheme  
@@ -123,8 +133,6 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
     YBY =LowRankMatVecStacked(YB,y);
     %right hand side of CN Y*BY*BX
     %YBY=(YB)'*y; %the result is a vector with length R.
-
-
 
     % % % OK, A(Ns,Ns,R)  YBY(r,r,R)
     % % % A = reshape(A,[Ns*Ns, R]);
@@ -194,42 +202,68 @@ function [X, Y] = ALSOptimization(A, B, x, y, BXc, BYc, epsilon)
 
     XA =LowRankMatVecStacked(A,X_OptR);
     XAX =LowRankMatVecStacked(XA,X_OptR);
-    YB =LowRankMatVecStacked(B,y);
+    BR = reshape(B,NV*NV,R);
+    %YB =LowRankMatVecStacked(B,y);
     %PROBLEM HERE: I need to connect XAX and BY and then the AHat matrix is
     %calculated
     %ah = AR*YBYR';
     XAXR = reshape(XAX,r*r,R);
-    YBR = reshape(YB,NV*r,R);
+    %YBR = reshape(YB,NV*r,R);
 
-    ahY=YBR*XAXR';
-    %A_hatY = reshape(ahY,NV,NV,r,r);
+    %ah = AR*YBYR';
+    ahY = BR*XAXR';
+    A_hatY = reshape(ahY,NV,NV,r,r);
 
-    bHat=X_OptR'*BXc*BYc';
+    % Y_BYc = y'*BYc;
+    % b_hat = BXc*Y_BYc';
+    X_BXc=X_OptR'*BXc;
+    b_hatY_vector = X_BXc*BYc';
 
-    %reshape
-    szXAX =size(XAX);
-    XAXR = reshape(XAX,szXAX(1)*szXAX(2),szXAX(3));
-    szY_optB=size(YB);
-    Y_optBR=reshape(YB,szY_optB(1)*szY_optB(2),szY_optB(3));
+    if r>1
+        bHat=X_OptR'*BXc*BYc';
+        A_hatYP = permute(A_hatY,[1,3,2,4]);
+        A_hatY_matrix = reshape(A_hatYP,NV*r,NV*r);
+        b_hatY_vector = reshape(b_hatY_vector,NV*r,1);
+        Y_Opt = A_hatY_matrix \ b_hatY_vector;
+    end
+    if r==1
+       A_hatY_matrix = reshape(A_hatY,NV*r,NV*r);
+       Y_Opt = A_hatY \ b_hatY_vector';
+    end
 
-    % XA =LowRankMatVecStacked(A,x);
-    % XAX =LowRankMatVecStacked(XA,x);
-    % Y_optB =LowRankMatVecStacked(B,Y_Opt);
-    % %reshape
-    % szXAX =size(XAX);
-    % XAXR = reshape(XAX,szXAX(1)*szXAX(2),szXAX(3));
-    % szY_optB=size(Y_optB);
-    % Y_optBR=reshape(Y_optB,szY_optB(1)*szY_optB(2),szY_optB(3));
 
-    %create the new A_hat and b_hat...
-    ahx=XAXR*Y_optBR';
+    % % % if r > 1
+    % % %     Y_Opt = reshape(Y_Opt,NV,r);
+    % % % end
+    
+    X_Opt = reshape(X_Opt,NS,r);
+    Y_Opt = reshape(Y_Opt,NV,r);
 
-    bhatx=x'*BXc*BYc';
+    % % % % % % % 
+    % % % % % % % %reshape
+    % % % % % % % szXAX =size(XAX);
+    % % % % % % % XAXR = reshape(XAX,szXAX(1)*szXAX(2),szXAX(3));
+    % % % % % % % szY_optB=size(YB);
+    % % % % % % % Y_optBR=reshape(YB,szY_optB(1)*szY_optB(2),szY_optB(3));
+    % % % % % % % 
+    % % % % % % % % XA =LowRankMatVecStacked(A,x);
+    % % % % % % % % XAX =LowRankMatVecStacked(XA,x);
+    % % % % % % % % Y_optB =LowRankMatVecStacked(B,Y_Opt);
+    % % % % % % % % %reshape
+    % % % % % % % % szXAX =size(XAX);
+    % % % % % % % % XAXR = reshape(XAX,szXAX(1)*szXAX(2),szXAX(3));
+    % % % % % % % % szY_optB=size(Y_optB);
+    % % % % % % % % Y_optBR=reshape(Y_optB,szY_optB(1)*szY_optB(2),szY_optB(3));
+    % % % % % % % 
+    % % % % % % % %create the new A_hat and b_hat...
+    % % % % % % % ahx=XAXR*Y_optBR';
+    % % % % % % % 
+    % % % % % % % bhatx=x'*BXc*BYc';
 
     %calculation of residuals to control the progress
 
-    X=x;
-    Y=y;
+    X=X_Opt;
+    Y=Y_Opt;
 
 end
 
