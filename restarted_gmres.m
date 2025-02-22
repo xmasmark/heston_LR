@@ -21,8 +21,13 @@ function x = restarted_gmres(A, b, x0, restart, tol, max_iter)
 
     n = length(b);
     x = x0;
-    r = b - A * x;
-    beta = norm(r);
+    beta = 0;
+    try
+        r = b - A * x(:);
+        beta = norm(r);
+    catch ME
+        keyboard;
+    end
     
     for iter = 1:max_iter
         [Q, H] = arnoldi_process(A, r, restart);
@@ -35,7 +40,11 @@ function x = restarted_gmres(A, b, x0, restart, tol, max_iter)
         [Q2, R] = qr(H,0);
         y = R \ (Q2'*e1);
 
-        x = x + Q(:, 1:restart) * y;
+        try
+            x = x(:) + Q(:, 1:restart) * y;
+        catch ME
+            keyboard;
+        end
         r = b - A * x;
         beta = norm(r);
         
