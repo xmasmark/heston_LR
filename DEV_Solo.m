@@ -117,8 +117,8 @@ epsilon = 0.00001;
 
 %UvHEClassicCNGMRS = HestonExplicitClassicCN_GMRS(params,K,r,q,Sm,Vm,T);
 
-iterations = 10;
-restart = 5;
+iterations = 3;
+restart = 0;
 
 %UvHEClassicCNGMRS = HestonExplicitClassicCNRC01(params,K,r,q,Sm,Vm,T,2, iterations, restart);
 

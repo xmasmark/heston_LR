@@ -111,7 +111,7 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
 
         [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
 
-        [xALS,yALS]=ALSOptimizationW(A, B, x, y, BXc, BYc, epsilon,max_iter);
+        [xALS,yALS]=ALSOptimizationW(A, B, x, y, BXc, BYc, epsilon, max_iter, restart);
 
         
     end    
@@ -127,7 +127,7 @@ end
 % the accuracy of the iteration needs to be assessed on the residuals
 % I would also add a parameter containing the max number of iterations
 
-function [X, Y] = ALSOptimizationW(A, B, x, y, BXc, BYc, epsilon, max_iter)
+function [X, Y] = ALSOptimizationW(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)
 
     residual = ALSResidualCalculation(A, B, x, y, BXc, BYc, epsilon);
 
@@ -135,7 +135,7 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BXc, BYc, epsilon, max_iter)
     y_opt = y;
     n = 1;
 
-    restart = 5;
+    %restart = 5;
 
     %ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)
     [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
