@@ -135,7 +135,7 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BXc, BYc, epsilon, max_iter)
     y_opt = y;
     n = 1;
 
-    [x_opt, y_opt] = ALSOptimizationV02(A, B, x_opt, y_opt, BXc, BYc, epsilon);
+    [x_opt, y_opt] = ALSOptimizationV02(A, B, x_opt, y_opt, BXc, BYc, epsilon, max_iter);
 
     while abs(residual) > epsilon 
         [x_opt, y_opt] = ALSOptimizationV02(A, B, x_opt, y_opt, BXc, BYc, epsilon, max_iter);
@@ -220,18 +220,22 @@ function [X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon, max_iter)
     b_hat = BXc*Y_BYc';
 
     %given the values I get, the following step is definitely wrong
-    if r == 1
-        A_hat_matrix = A_hat;
-        b_hat_vector = b_hat;
-    end
+    A_hat_matrix = A_hat;
+    b_hat_vector = b_hat;
+
+    % if r == 1
+    %     A_hat_matrix = A_hat;
+    %     b_hat_vector = b_hat;
+    % end
     if r > 2
         %A_hat -- sizes are NS, NS, r and r
         A_hatP = permute(A_hat,[1,3,2,4]);
         A_hat_matrix = reshape(A_hatP,NS*r,NS*r);
         b_hat_vector = reshape(b_hat,NS*r,1);
     end
-   
-    X_Opt = gmres_simple(A_hat_matrix, b_hat_vector, epsilon, max_iter)
+
+    %[x, flag, relres, iter]
+    [X_Opt, flag, relres, iter] = gmres_simple(A_hat_matrix, b_hat_vector, epsilon, max_iter);
     %X_Opt = A_hat_matrix \ b_hat_vector;
 
     %solving for Y
@@ -256,8 +260,8 @@ function [X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon, max_iter)
     if r>1
         %bHat=X_OptR'*BXc*BYc';
         %A_hatY -- sizes are NV, NV, r and r
-        %A_hatYP = permute(A_hatY,[1,3,2,4]);
-        A_hatYP = permute(A_hatY,[2,4,1,3]);
+        A_hatYP = permute(A_hatY,[1,3,2,4]);
+        %A_hatYP = permute(A_hatY,[2,4,1,3]);
         A_hatY_matrix = reshape(A_hatYP,NV*r,NV*r);
         b_hatY_vector = reshape(b_hatY_vector,NV*r,1);
         %Y_Opt = A_hatY_matrix \ b_hatY_vector;
@@ -265,11 +269,13 @@ function [X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon, max_iter)
     if r==1
        %A_hatY_matrix = reshape(A_hatY,NV*r,NV*r);
        A_hatY_matrix = A_hatY;
-       Y_Opt = A_hatY \ b_hatY_vector';
+       b_hatY_vector = b_hatY_vector';
+       %Y_Opt = A_hatY \ b_hatY_vector';
     end
 
     %Y_Opt = A_hatY_matrix \ b_hatY_vector;
-    Y_Opt = gmres_simple(A_hatY_matrix, b_hatY_vector, epsilon, max_iter)
+    %[X_Opt, flag, relres, iter] 
+    [Y_Opt, flag, relres, iter] = gmres_simple(A_hatY_matrix, b_hatY_vector, epsilon, max_iter);
    
     X_Opt = reshape(X_Opt,NS,r);
     Y_Opt = reshape(Y_Opt,NV,r);
