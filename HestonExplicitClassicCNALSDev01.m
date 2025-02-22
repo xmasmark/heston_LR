@@ -165,11 +165,14 @@ function residual = ALSResidualCalculation(A, B, x, y, BXc, BYc, epsilon)
     yv = reshape(XAX,r*r*R,1);
 
     one_side = xv'*yv;
-
+    
     xBx = x'*BXc;
     yBYc = y'*BYc;
 
-    other_side = xBx(:)*(yBYc(:))';
+    s= size(xBx);
+    one = reshape(xBx,s(1)*s(2),1);
+    two = reshape(yBYc,1,s(1)*s(2));
+    other_side = two*one;
 
     residual = one_side - other_side;
 end
