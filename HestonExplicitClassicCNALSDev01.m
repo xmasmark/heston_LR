@@ -136,20 +136,20 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
 
         [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         %%%%%[AX,AY] = LowRankMatVec(A,B,x,y);
-        [AXALS,AYALS] = LowRankMatVec(A,B,xALS,yALS);
+        %[AXALS,AYALS] = LowRankMatVec(A,B,xALS,yALS);
 
-        [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
-
-        %half Euler step
-        %%%%%FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
-        %%%%%FY = [           y,         AY,    BY];
-
-        FXALS = [(1-r*dt/2)*xALS,  (dt/2)*AXALS, dt*BX]; 
-        FYALS = [           yALS,         AYALS,    BY];
-
-        %Right hand side vector components
-        %%%%%[BXc,BYc]=CompressData(FX, FY, epsilon);
-        [BXcALS,BYcALS]=CompressData(FXALS, FYALS, epsilon);
+        % % % % % % % [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
+        % % % % % % % 
+        % % % % % % % %half Euler step
+        % % % % % % % %%%%%FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
+        % % % % % % % %%%%%FY = [           y,         AY,    BY];
+        % % % % % % % 
+        % % % % % % % FXALS = [(1-r*dt/2)*xALS,  (dt/2)*AXALS, dt*BX]; 
+        % % % % % % % FYALS = [           yALS,         AYALS,    BY];
+        % % % % % % % 
+        % % % % % % % %Right hand side vector components
+        % % % % % % % %%%%%[BXc,BYc]=CompressData(FX, FY, epsilon);
+        % % % % % % % [BXcALS,BYcALS]=CompressData(FXALS, FYALS, epsilon);
 
         %the LHS are operators, not a matrix
         %BXc-->bx
@@ -162,7 +162,10 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
 
         %%%%%[X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
 
-        [xALS,yALS]=ALSOptimizationW(A, B, xALS, yALS, BXcALS, BYcALS, epsilon, max_iter, restart);
+        %ALSOptimizationW(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon, max_iter, restart)
+        %[xALS,yALS]=ALSOptimizationW(A, B, xALS, yALS, BXcALS, BYcALS, dt, r, epsilon, max_iter, restart);
+        
+        [xALS,yALS]=ALSOptimizationW(A, B, xALS, yALS, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon, max_iter, restart);
 
         % % % % % % % discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
         % % % % % % % b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
@@ -226,38 +229,80 @@ end
 % the accuracy of the iteration needs to be assessed on the residuals
 % I would also add a parameter containing the max number of iterations
 
-function [X, Y] = ALSOptimizationW(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)
+function [X, Y] = ALSOptimizationW(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon, max_iter, restart)
 
-    residual = ALSResidualCalculation(A, B, x, y, BXc, BYc);
+    residual = ALSResidualCalculation(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
 
     x_opt = x;
     y_opt = y;
     n = 1;
 
-    convergence_iterations = 50;
+    convergence_iterations = 3;
     %restart = 5;
+    % [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
+    % [AXALS,AYALS] = LowRankMatVec(A,B,x,y);
+    % 
+    % FXALS = [(1-r*dt/2)*x,  (dt/2)*AXALS, dt*BX]; 
+    % FYALS = [           y,         AYALS,    BY];
+    % 
+    % %Right hand side vector components
+    % %%%%%[BXc,BYc]=CompressData(FX, FY, epsilon);
+    % [BXc,BYc]=CompressData(FXALS, FYALS, epsilon);
+
+    [BXc, BYc] = CalculateBoundaries(x, y, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon);
 
     %ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)
     [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
 
-    % while abs(residual) > epsilon 
-    %     [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
-    %     residual = ALSResidualCalculation(A, B, x_opt, y_opt, BXc, BYc);
-    %     n = n+1;
-    %     % if n>max_iter
-    %     %     break
-    %     % end
-    %     if n > convergence_iterations
-    %         break
-    %     end
-    % end
+    while abs(residual) > epsilon 
+        [BXc, BYc] = CalculateBoundaries(x_opt, y_opt, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon);
+        [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
+        residual = ALSResidualCalculation(A, B, x_opt, y_opt, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
+        n = n+1;
+        % if n>max_iter
+        %     break
+        % end
+        if n > convergence_iterations
+            break
+        end
+    end
 
     X = x_opt;
     Y = y_opt;
     %[X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon);
 end
 
-function residual = ALSResidualCalculation(A, B, x, y, BXc, BYc)
+function [Bx, By] = CalculateBoundaries(x, y, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon)
+
+    [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
+    [AXALS,AYALS] = LowRankMatVec(A,B,x,y);
+
+    FXALS = [(1-r*dt/2)*x,  (dt/2)*AXALS, dt*BX]; 
+    FYALS = [           y,         AYALS,    BY];
+
+    %Right hand side vector components
+    %%%%%[BXc,BYc]=CompressData(FX, FY, epsilon);
+    [Bx,By]=CompressData(FXALS, FYALS, epsilon);
+
+end
+
+function residual = ALSResidualCalculation(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon)
+
+    [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
+
+    [AXALS,AYALS] = LowRankMatVec(A,B,x,y);
+    % FXALS = [(1-r*dt/2)*x,  (dt/2)*AXALS, dt*BX]; 
+    % FYALS = [           y,         AYALS,    BY];
+    % 
+    % [BXcALS,BYcALS]=CompressData(FXALS, FYALS, epsilon);
+
+    FXALS = [(1-r*dt/2)*x,  (dt/2)*AXALS, dt*BX]; 
+    FYALS = [           y,         AYALS,    BY];
+
+    %Right hand side vector components
+    %%%%%[BXc,BYc]=CompressData(FX, FY, epsilon);
+    [BXcALS,BYcALS]=CompressData(FXALS, FYALS, epsilon);
+
 
     szA = size(A);
     R = szA(3);
@@ -274,15 +319,15 @@ function residual = ALSResidualCalculation(A, B, x, y, BXc, BYc)
 
     one_side = xv'*yv;
     
-    xBx = x'*BXc;
-    yBYc = y'*BYc;
+    xBx = x'*BXcALS;
+    yBYc = y'*BYcALS;
 
     s= size(xBx);
     one = reshape(xBx,s(1)*s(2),1);
     two = reshape(yBYc,1,s(1)*s(2));
     other_side = two*one;
 
-    residual = one_side - other_side;
+    residual = 0.5*(one_side) - other_side;
 end
 
 
