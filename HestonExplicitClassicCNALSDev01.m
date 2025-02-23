@@ -70,9 +70,60 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
 	    Y(v)=1;
     end
     
+    SMatrix = diag(S);
+    S2Matrix = diag(S.^2);
+    VMatrix = diag(V);
+
+    d1sM = MDerivativeVM(NS, ds, 0, 1);
+    d2sM = MSecondDerivativePlusCVM(NS, ds, 0, 1);
+    
+    d1vM = MDerivativeVM(NV, dv, 1, 1);
+    d2vM = MSecondDerivativePlusCVM(NV, dv, 1, 1);
+
+    IS = eye(NS);
+    IV = eye(NV);
+
+    A1KX = (r-q)*SMatrix*d1sM;
+    A1KY = IV;
+    A2KX = 0.5*S2Matrix*d2sM;
+    A2KY = VMatrix;
+    A3KX = IS;
+    A3KY = (kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix)* d1vM;
+    A4KX = IS;
+    A4KY = (0.5 * sigma^2)*VMatrix * d2vM;
+    A5KX = SMatrix*d1sM;
+    A5KY = rho * sigma * (VMatrix*d1vM);
+
     % SMatrix = diag(S);
     % S2Matrix = diag(S.^2);
     % VMatrix = diag(V);
+
+    b1x = zeros(NS,1);
+    b1x(NS)=(1/ds);
+    b1y = ones(NV,1);
+
+    b2x = zeros(NS,1);
+    b2x(NS)=(1/ds);
+    b2y = ones(NV,1);
+    
+    b3y = zeros(NV,2); %2 columns because this is rank 2
+    b3y(1,1)=1;
+    b3y(NV,2)=1;
+   
+    b5x = zeros(NS,1);
+    b5x(NS)=(1/ds);
+    b5y = ones(NV,1);
+
+    b1x = (r-q) * SMatrix * b1x;
+    b2x = 0.5 * S2Matrix * b2x;
+    b2y = VMatrix'*b2y;
+    b3y = (kappa * (theta * eye(NV) - VMatrix) - lambda * VMatrix)' * b3y;
+    b4x = zeros(NS,1);
+    b4y = zeros(NV,1);
+    
+    b4y = 0.5 * sigma^2*VMatrix'*b4y;
+    b5x = rho * sigma * SMatrix * b5x;
+    b5y = VMatrix'*b5y;
 
     xALS = X;
     yALS = Y;
@@ -80,24 +131,24 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
     for t = 1:NT-1
         tol = 1e-5;  % Tolerance for convergence and compression
 
-        [x,y]=CompressData(X,Y,tol);
+        %%%%%[x,y]=CompressData(X,Y,tol);
         [xALS,yALS]=CompressData(xALS,yALS,tol);
 
         [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
-        [AX,AY] = LowRankMatVec(A,B,x,y);
+        %%%%%[AX,AY] = LowRankMatVec(A,B,x,y);
         [AXALS,AYALS] = LowRankMatVec(A,B,xALS,yALS);
-        
+
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
 
         %half Euler step
-        FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
-        FY = [           y,         AY,    BY];
+        %%%%%FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
+        %%%%%FY = [           y,         AY,    BY];
 
         FXALS = [(1-r*dt/2)*xALS,  (dt/2)*AXALS, dt*BX]; 
         FYALS = [           yALS,         AYALS,    BY];
-        
+
         %Right hand side vector components
-        [BXc,BYc]=CompressData(FX, FY, epsilon);
+        %%%%%[BXc,BYc]=CompressData(FX, FY, epsilon);
         [BXcALS,BYcALS]=CompressData(FXALS, FYALS, epsilon);
 
         %the LHS are operators, not a matrix
@@ -109,15 +160,63 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
         % restart = 80;  % Restart after N iterations
         max_iter = iterations;  % Maximum number of iterations
 
-        [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
+        %%%%%[X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
 
-        [xALS,yALS]=ALSOptimizationW(A, B, x, y, BXc, BYc, epsilon, max_iter, restart);
+        [xALS,yALS]=ALSOptimizationW(A, B, xALS, yALS, BXcALS, BYcALS, epsilon, max_iter, restart);
 
+        % % % % % % % discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
+        % % % % % % % b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
+        % % % % % % % 
+        % % % % % % % tol = 1e-5;  % Tolerance for convergence and compression
+        % % % % % % % 
+        % % % % % % % [x,y]=CompressData(X,Y,tol);
+        % % % % % % % 
+        % % % % % % % [A,B] = HestonModelOperatorLean(A1KX,A1KY,A2KX,A2KY,A3KX,A3KY,A4KX,A4KY,A5KX,A5KY);
+        % % % % % % % [AX,AY] = LowRankMatVec(A,B,x,y);
+        % % % % % % % 
+        % % % % % % % [BX,BY] = HestonMatVecBoundariesLean(b1x,b2x,b3x,b4x,b5x,b1y,b2y,b3y,b4y,b5y);
+        % % % % % % % %half Euler step
+        % % % % % % % FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
+        % % % % % % % FY = [           y,         AY,    BY];
+        % % % % % % % 
+        % % % % % % % %Right hand side vector components
+        % % % % % % % [BXc,BYc]=CompressData(FX, FY, epsilon);
+        % % % % % % % max_iter = iterations;  % Maximum number of iterations
+        % % % % % % % 
+        % % % % % % % %[X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
+        % % % % % % % [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
         
     end    
-    %U=X*Y';
-    U= xALS*yALS';
+    U=X*Y';
+    %U= xALS*yALS';
 end
+
+    % % % % % for t = 1:NT-1
+    % % % % %     discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
+    % % % % %     b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
+    % % % % % 
+    % % % % %     tol = 1e-5;  % Tolerance for convergence and compression
+    % % % % % 
+    % % % % %     [x,y]=CompressData(X,Y,tol);
+    % % % % % 
+    % % % % %     [A,B] = HestonModelOperatorLean(A1KX,A1KY,A2KX,A2KY,A3KX,A3KY,A4KX,A4KY,A5KX,A5KY);
+    % % % % %     [AX,AY] = LowRankMatVec(A,B,x,y);
+    % % % % % 
+    % % % % %     [BX,BY] = HestonMatVecBoundariesLean(b1x,b2x,b3x,b4x,b5x,b1y,b2y,b3y,b4y,b5y);
+    % % % % %     %half Euler step
+    % % % % %     FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
+    % % % % %     FY = [           y,         AY,    BY];
+    % % % % % 
+    % % % % %     %Right hand side vector components
+    % % % % %     [BXc,BYc]=CompressData(FX, FY, epsilon);
+    % % % % %     max_iter = iterations;  % Maximum number of iterations
+    % % % % % 
+    % % % % %     [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
+    % % % % % end    
+
+
+
+
 
 % ALS stands for Alternating Linear Scheme  
 % the concept is to find X and Y solutions as an iterative process
@@ -129,32 +228,36 @@ end
 
 function [X, Y] = ALSOptimizationW(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)
 
-    residual = ALSResidualCalculation(A, B, x, y, BXc, BYc, epsilon);
+    residual = ALSResidualCalculation(A, B, x, y, BXc, BYc);
 
     x_opt = x;
     y_opt = y;
     n = 1;
 
+    convergence_iterations = 50;
     %restart = 5;
 
     %ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)
     [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
 
-    while abs(residual) > epsilon 
-        [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
-        residual = ALSResidualCalculation(A, B, x_opt, y_opt, BXc, BYc, epsilon);
-        n = n+1;
-        if n>max_iter
-            break
-        end
-    end
+    % while abs(residual) > epsilon 
+    %     [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
+    %     residual = ALSResidualCalculation(A, B, x_opt, y_opt, BXc, BYc);
+    %     n = n+1;
+    %     % if n>max_iter
+    %     %     break
+    %     % end
+    %     if n > convergence_iterations
+    %         break
+    %     end
+    % end
 
-    X=x_opt;
+    X = x_opt;
     Y = y_opt;
     %[X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon);
 end
 
-function residual = ALSResidualCalculation(A, B, x, y, BXc, BYc, epsilon)
+function residual = ALSResidualCalculation(A, B, x, y, BXc, BYc)
 
     szA = size(A);
     R = szA(3);
@@ -222,26 +325,42 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
     %     A_hat_matrix = A_hat;
     %     b_hat_vector = b_hat;
     % end
-    if r > 2
+    if r >= 2
         %A_hat -- sizes are NS, NS, r and r
         A_hatP = permute(A_hat,[1,3,2,4]);
         A_hat_matrix = reshape(A_hatP,NS*r,NS*r);
         b_hat_vector = reshape(b_hat,NS*r,1);
     end
 
+    x0=zeros(NS,1);
+    x0=x;
+
+    q = 0;
+    dAx = ndims(A_hat_matrix);
+    if dAx ~= 2
+        q = 1;
+        A_hat_matrix = reshape(A_hat_matrix,NS,NS);
+    else
+        q = 2;
+    end
+
+
+
     %[x, flag, relres, iter]
     %[X_Opt, flag, relres, iter] = gmres_simple(A_hat_matrix, b_hat_vector, epsilon, max_iter);
-    X_Opt = restarted_gmres(A_hat_matrix, b_hat_vector, x, restart, epsilon, max_iter);
+    X_Opt = restarted_gmres(A_hat_matrix, b_hat_vector, x0, restart, epsilon, max_iter);
     %X_Opt = A_hat_matrix \ b_hat_vector;
 
-    %solving for Y
-    if r == 1
-        X_OptR = X_Opt;
-    end
-    if r > 1
-        X_OptR = reshape(X_Opt,NS,r);
-    end
+    X_OptR = reshape(X_Opt,NS,r);
 
+    % if r == 1
+    %     X_OptR = X_Opt;
+    % end
+    % if r > 1
+    %     X_OptR = reshape(X_Opt,NS,r);
+    % end
+
+    %solving for Y
     XA =LowRankMatVecStacked(A,X_OptR);
     XAX =LowRankMatVecStacked(XA,X_OptR);
     BR = reshape(B,NV*NV,R);
@@ -269,10 +388,21 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
        %Y_Opt = A_hatY \ b_hatY_vector';
     end
 
+    y0=zeros(NV,1);
+    %y0=y;
+
+    dAy = ndims(A_hatY_matrix);
+    if dAy ~= 2
+        q = 1;
+        A_hatY_matrix = reshape(A_hatY_matrix,NV,NV);
+    else
+        q = 2;
+    end
+
     %Y_Opt = A_hatY_matrix \ b_hatY_vector;
     %[X_Opt, flag, relres, iter] 
     %[Y_Opt, flag, relres, iter] = gmres_simple(A_hatY_matrix, b_hatY_vector, epsilon, max_iter);
-    Y_Opt = restarted_gmres(A_hatY_matrix, b_hatY_vector, y, restart, epsilon, max_iter);
+    Y_Opt = restarted_gmres(A_hatY_matrix, b_hatY_vector, y0, restart, epsilon, max_iter);
    
     X_Opt = reshape(X_Opt,NS,r);
     Y_Opt = reshape(Y_Opt,NV,r);

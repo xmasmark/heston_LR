@@ -28,9 +28,9 @@ Tmin = 0;  Tmax = Mat;
 % nS = 79;        % Stock price
 % nV = 39;        % Volatility
 
-nS = 99;        % Stock price
-nV = 99;        % Volatility
-nT = 1000;      % Maturity
+nS = 29;        % Stock price -- 99
+nV = 19;        % Volatility  -- 99
+nT = 100;      % Maturity    -- 1000 
 
 % The maturity time increment and grid
 dt = (Tmax-Tmin)/nT;
@@ -133,7 +133,8 @@ UvHEClassicCNXYdev = HestonExplicitClassicCNXYRC02(params,K,r,q,Sm,Vm,T,2, itera
 timeElapsedXY = toc;
 
 tic
-UvHEClassicCNXYLeanDev = HestonExplicitClassicCNXYRC04(params,K,r,q,Sm,Vm,T,2, iterations, restart);
+UvHEClassicCNXYLeanDev = HestonExplicitClassicCNALSDev01(params,K,r,q,Sm,Vm,T,2,iterations, restart);
+%UvHEClassicCNXYLeanDev = HestonExplicitClassicCNXYRC04(params,K,r,q,Sm,Vm,T,2, iterations, restart);
 timeElapsedLean = toc;
 
 %Suliko = HestonExplicitClassicCNXYCOMP(params,K,r,q,S,V,T);
@@ -245,6 +246,7 @@ fprintf('Closed Form                                %10.4f              \n', Clo
 % fprintf('Heston Classic CN GMRS vectorised          %10.4f        %5.2f       %10.4f\n', UniformPriceHEClassicCNGMRS,UvHEClassicCNGMRSError, timeElapsed)
 %fprintf('Heston Classic CN Backslash vectorised     %10.4f        %5.2f       %10.4f\n', UniformPriceHEClassicCNGMRS,UvHEClassicCNGMRSError, timeElapsed)
 fprintf('Heston Classic CN GMRS Low Rank Super Dima %10.4f        %5.2f       %10.4f\n', UvHEClassicCNXYdevPrice,UvHEClassicCNXYdevError, timeElapsedXY)
-fprintf('Heston Classic CN GMRS Low Rank Lean       %10.4f        %5.2f       %10.4f\n\n', UvHEClassicCNXYLeanDevPrice,UvHEClassicCNXYLeanDevError, timeElapsedLean)
+%fprintf('Heston Classic CN GMRS Low Rank Lean       %10.4f        %5.2f       %10.4f\n\n', UvHEClassicCNXYLeanDevPrice,UvHEClassicCNXYLeanDevError, timeElapsedLean)
+fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %5.2f       %10.4f\n\n', UvHEClassicCNXYLeanDevPrice,UvHEClassicCNXYLeanDevError, timeElapsedLean)
 fprintf('Dmitry is the BEST                                                         \n')
 fprintf('-----------------------------------------------------------------------------------\n')
