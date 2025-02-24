@@ -231,7 +231,7 @@ end
 
 function [X, Y] = ALSOptimizationW(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon, max_iter, restart)
 
-    residual = ALSResidualCalculation(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
+    residual = ALSEnergy(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
 
     x_opt = x;
     y_opt = y;
@@ -257,7 +257,7 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, k
     while abs(residual) > epsilon 
         [BXc, BYc] = CalculateBoundaries(x_opt, y_opt, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon);
         [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
-        residual = ALSResidualCalculation(A, B, x_opt, y_opt, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
+        residual = ALSEnergy(A, B, x_opt, y_opt, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
         n = n+1;
         % if n>max_iter
         %     break
@@ -286,7 +286,7 @@ function [Bx, By] = CalculateBoundaries(x, y, A, B, NS, NV, ds, dv, S, V, r, q, 
 
 end
 
-function residual = ALSResidualCalculation(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon)
+function residual = ALSEnergy(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon)
 
     [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
 
