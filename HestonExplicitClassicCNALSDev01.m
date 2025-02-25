@@ -131,93 +131,17 @@ function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iteration
     for t = 1:NT-1
         tol = 1e-5;  % Tolerance for convergence and compression
 
-        %%%%%[x,y]=CompressData(X,Y,tol);
         [xALS,yALS]=CompressData(xALS,yALS,tol);
 
         [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
-        %%%%%[AX,AY] = LowRankMatVec(A,B,x,y);
-        %[AXALS,AYALS] = LowRankMatVec(A,B,xALS,yALS);
-
-        % % % % % % % [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
-        % % % % % % % 
-        % % % % % % % %half Euler step
-        % % % % % % % %%%%%FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
-        % % % % % % % %%%%%FY = [           y,         AY,    BY];
-        % % % % % % % 
-        % % % % % % % FXALS = [(1-r*dt/2)*xALS,  (dt/2)*AXALS, dt*BX]; 
-        % % % % % % % FYALS = [           yALS,         AYALS,    BY];
-        % % % % % % % 
-        % % % % % % % %Right hand side vector components
-        % % % % % % % %%%%%[BXc,BYc]=CompressData(FX, FY, epsilon);
-        % % % % % % % [BXcALS,BYcALS]=CompressData(FXALS, FYALS, epsilon);
-
-        %the LHS are operators, not a matrix
-        %BXc-->bx
-        %BYc-->by
-        %?A
-        %?B
-        % Set GMRES parameters
-        % restart = 80;  % Restart after N iterations
         max_iter = iterations;  % Maximum number of iterations
-
-        %%%%%[X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
-
-        %ALSOptimizationW(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon, max_iter, restart)
-        %[xALS,yALS]=ALSOptimizationW(A, B, xALS, yALS, BXcALS, BYcALS, dt, r, epsilon, max_iter, restart);
         
         [xALS,yALS]=ALSOptimizationW(A, B, xALS, yALS, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon, max_iter, restart);
-
-        % % % % % % % discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
-        % % % % % % % b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
-        % % % % % % % 
-        % % % % % % % tol = 1e-5;  % Tolerance for convergence and compression
-        % % % % % % % 
-        % % % % % % % [x,y]=CompressData(X,Y,tol);
-        % % % % % % % 
-        % % % % % % % [A,B] = HestonModelOperatorLean(A1KX,A1KY,A2KX,A2KY,A3KX,A3KY,A4KX,A4KY,A5KX,A5KY);
-        % % % % % % % [AX,AY] = LowRankMatVec(A,B,x,y);
-        % % % % % % % 
-        % % % % % % % [BX,BY] = HestonMatVecBoundariesLean(b1x,b2x,b3x,b4x,b5x,b1y,b2y,b3y,b4y,b5y);
-        % % % % % % % %half Euler step
-        % % % % % % % FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
-        % % % % % % % FY = [           y,         AY,    BY];
-        % % % % % % % 
-        % % % % % % % %Right hand side vector components
-        % % % % % % % [BXc,BYc]=CompressData(FX, FY, epsilon);
-        % % % % % % % max_iter = iterations;  % Maximum number of iterations
-        % % % % % % % 
-        % % % % % % % %[X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
-        % % % % % % % [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
         
     end    
-    U=X*Y';
-    %U= xALS*yALS';
+    %U=X*Y';
+    U= xALS*yALS';
 end
-
-    % % % % % for t = 1:NT-1
-    % % % % %     discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
-    % % % % %     b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
-    % % % % % 
-    % % % % %     tol = 1e-5;  % Tolerance for convergence and compression
-    % % % % % 
-    % % % % %     [x,y]=CompressData(X,Y,tol);
-    % % % % % 
-    % % % % %     [A,B] = HestonModelOperatorLean(A1KX,A1KY,A2KX,A2KY,A3KX,A3KY,A4KX,A4KY,A5KX,A5KY);
-    % % % % %     [AX,AY] = LowRankMatVec(A,B,x,y);
-    % % % % % 
-    % % % % %     [BX,BY] = HestonMatVecBoundariesLean(b1x,b2x,b3x,b4x,b5x,b1y,b2y,b3y,b4y,b5y);
-    % % % % %     %half Euler step
-    % % % % %     FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
-    % % % % %     FY = [           y,         AY,    BY];
-    % % % % % 
-    % % % % %     %Right hand side vector components
-    % % % % %     [BXc,BYc]=CompressData(FX, FY, epsilon);
-    % % % % %     max_iter = iterations;  % Maximum number of iterations
-    % % % % % 
-    % % % % %     [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
-    % % % % % end    
-
-
 
 
 
@@ -237,7 +161,7 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, k
     y_opt = y;
     n = 1;
 
-    convergence_iterations = 3;
+    convergence_iterations = 20;
     %restart = 5;
     % [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
     % [AXALS,AYALS] = LowRankMatVec(A,B,x,y);
@@ -249,15 +173,24 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, k
     % %%%%%[BXc,BYc]=CompressData(FX, FY, epsilon);
     % [BXc,BYc]=CompressData(FXALS, FYALS, epsilon);
 
+    
     [BXc, BYc] = CalculateBoundaries(x, y, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon);
 
+    %Adt= each slice of A is multiplied by (dt/2)
+    %also I need to add (1-dt*r/2)I(nsxns) and this will be another stack
+    %so the rank will be R+1 rather than R
+    %Bdt will be a sline I(nvxnv) and the rest stays
+    %in both cases, the last slice goes last
+
     %ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)
-    [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
+    Ap = APrepared(A,dt,r);
+    Bp = BPrepared(B);
+    [x_opt, y_opt] = ALSOptimizationV04(Ap, Bp, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
 
     while abs(residual) > epsilon 
         [BXc, BYc] = CalculateBoundaries(x_opt, y_opt, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon);
-        [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
-        residual = ALSEnergy(A, B, x_opt, y_opt, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
+        [x_opt, y_opt] = ALSOptimizationV04(Ap, Bp, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
+        residual = ALSEnergy(Ap, Bp, x_opt, y_opt, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
         n = n+1;
         % if n>max_iter
         %     break
@@ -270,6 +203,34 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, k
     X = x_opt;
     Y = y_opt;
     %[X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon);
+end
+
+function [Adt] = APrepared(A,dt, r)
+
+    s = size(A);
+
+    Adt(:,:,1)=(-dt/2)*A(:,:,1);
+    Adt(:,:,2)=(-dt/2)*A(:,:,2);
+    Adt(:,:,3)=(-dt/2)*A(:,:,3);
+    Adt(:,:,4)=(-dt/2)*A(:,:,4);
+    Adt(:,:,5)=(-dt/2)*A(:,:,5);
+    
+    Last = (1-dt*r/2)*eye(s(1),s(1));
+    Adt(:,:,6)=Last;
+end
+
+function [Bdt] = BPrepared(B)
+
+    s = size(B);
+
+    Bdt(:,:,1)=B(:,:,1);
+    Bdt(:,:,2)=B(:,:,2);
+    Bdt(:,:,3)=B(:,:,3);
+    Bdt(:,:,4)=B(:,:,4);
+    Bdt(:,:,5)=B(:,:,5);
+    
+    Last = eye(s(1),s(1));
+    Bdt(:,:,6)=Last;
 end
 
 function [Bx, By] = CalculateBoundaries(x, y, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon)
