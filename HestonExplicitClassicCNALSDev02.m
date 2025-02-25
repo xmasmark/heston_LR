@@ -1,4 +1,4 @@
-function U = HestonExplicitClassicCNALSDev01(params,K,r,q,S,V,T, mode, iterations, restart)
+function U = HestonExplicitClassicCNALSDev02(params,K,r,q,S,V,T, mode, iterations, restart)
 
     %mode is to decide the system resolution:
     %0--> Euler
