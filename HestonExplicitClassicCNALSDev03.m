@@ -154,14 +154,14 @@ function U = HestonExplicitClassicCNALSDev03(params,K,r,q,S,V,T, mode, iteration
         max_iter = iterations;  % Maximum number of iterations
         
         [xALS,yALS]=ALSOptimizationW(A, B, xALS, yALS, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon, max_iter, restart);
-        [X, Y] = GMRES_LowRankV01(X,Y, A, B, r, BXc, BYc, X, Y, restart, tol, max_iter, dt);
-        U = xALS*yALS';
-        U2 = X*Y';
-        dif = norm(U-U2,'fro');
+        % [X, Y] = GMRES_LowRankV01(X,Y, A, B, r, BXc, BYc, X, Y, restart, tol, max_iter, dt);
+        % U = xALS*yALS';
+        % U2 = X*Y';
+        % dif = norm(U-U2,'fro');
     end    
     %U=X*Y';
     U= xALS*yALS';
-    U2 = X*Y';
+    % U2 = X*Y';
 end
 
 
@@ -182,7 +182,7 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, k
     y_opt = y;
     n = 1;
 
-    convergence_iterations = 30;
+    convergence_iterations = 3;
     %restart = 5;
     % [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
     % [AXALS,AYALS] = LowRankMatVec(A,B,x,y);
@@ -812,11 +812,12 @@ end
 
 
 function [P] = LowRankMatVecSingle(M,LR)
-    szA = size(M);
-    P = [];
-    for n = 1:szA(3)
-        P=[P,M(:,:,n)*LR];
-    end
+    % szA = size(M);
+    % P = [];
+    % for n = 1:szA(3)
+    %     P=[P,M(:,:,n)*LR];
+    % end
+    P=pagemtimes(M,LR);
 end
 
 % function [xl,yl] = LowRankMatVec(A,B,x,y)
