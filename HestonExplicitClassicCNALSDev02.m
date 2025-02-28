@@ -125,11 +125,28 @@ function U = HestonExplicitClassicCNALSDev02(params,K,r,q,S,V,T, mode, iteration
     b5x = rho * sigma * SMatrix * b5x;
     b5y = VMatrix'*b5y;
 
-    xALS = X;
-    yALS = Y;
+    % xALS = X;
+    % yALS = Y;
+    x = X;
+    y = Y;
+
+    xALS = [X,zeros(NS,6)];
+    yALS = [Y,zeros(NV,6)];
 
     for t = 1:NT-1
         tol = 1e-5;  % Tolerance for convergence and compression
+
+        [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+        [AX,AY] = LowRankMatVec(A,B,x,y);
+        [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
+
+        %half Euler step
+        FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
+        FY = [           y,         AY,    BY];
+
+        %Right hand side vector components
+        [BXc,BYc]=CompressData(FX, FY, epsilon);
+
 
         %[xALS,yALS]=CompressData(xALS,yALS,tol);
 
@@ -137,10 +154,14 @@ function U = HestonExplicitClassicCNALSDev02(params,K,r,q,S,V,T, mode, iteration
         max_iter = iterations;  % Maximum number of iterations
         
         [xALS,yALS]=ALSOptimizationW(A, B, xALS, yALS, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon, max_iter, restart);
-        
+        [X, Y] = GMRES_LowRankV01(X,Y, A, B, r, BXc, BYc, X, Y, restart, tol, max_iter, dt);
+        U = xALS*yALS';
+        U2 = X*Y';
+        dif = norm(U-U2,'fro');
     end    
     %U=X*Y';
     U= xALS*yALS';
+    U2 = X*Y';
 end
 
 
@@ -161,7 +182,7 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, k
     y_opt = y;
     n = 1;
 
-    convergence_iterations = 3;
+    convergence_iterations = 30;
     %restart = 5;
     % [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
     % [AXALS,AYALS] = LowRankMatVec(A,B,x,y);
@@ -338,8 +359,8 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
         b_hat_vector = reshape(b_hat,NS*r,1);
     end
 
-    x0=zeros(NS,1);
-    x0=x;
+    % sx0=zeros(NS*r,1);
+    x0=reshape(x,NS*r,1);
 
     q = 0;
     dAx = ndims(A_hat_matrix);
@@ -394,7 +415,8 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
        %Y_Opt = A_hatY \ b_hatY_vector';
     end
 
-    y0=zeros(NV,1);
+    % y0=zeros(NV*r,1);
+    y0 = reshape(y,NV*r,1);
     %y0=y;
 
     dAy = ndims(A_hatY_matrix);
