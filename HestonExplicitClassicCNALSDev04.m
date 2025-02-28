@@ -132,12 +132,17 @@ function U = HestonExplicitClassicCNALSDev04(params,K,r,q,S,V,T, mode, iteration
 
     xALS = [X,zeros(NS,6)];
     yALS = [Y,zeros(NV,6)];
+    % xALS = X;
+    % yALS = Y;
+
 
     for t = 1:NT-1
         tol = 1e-5;  % Tolerance for convergence and compression
 
         [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         [AX,AY] = LowRankMatVec(A,B,x,y);
+        %BX and BY are constants at each iteration so they shouldn't be
+        %recalculated.
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
 
         %half Euler step
@@ -153,7 +158,8 @@ function U = HestonExplicitClassicCNALSDev04(params,K,r,q,S,V,T, mode, iteration
         [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         max_iter = iterations;  % Maximum number of iterations
         
-        [xALS,yALS]=ALSOptimizationW(A, B, xALS, yALS, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon, max_iter, restart);
+        [xALS,yALS]=ALSOptimizationW(A, B, xALS, yALS, dt, r, BXc, BYc, epsilon, max_iter, restart);
+        %[xALS,yALS]=ALSOptimizationW(A, B, xALS, yALS, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon, max_iter, restart);
         % [X, Y] = GMRES_LowRankV01(X,Y, A, B, r, BXc, BYc, X, Y, restart, tol, max_iter, dt);
         % U = xALS*yALS';
         % U2 = X*Y';
@@ -174,15 +180,16 @@ end
 % the accuracy of the iteration needs to be assessed on the residuals
 % I would also add a parameter containing the max number of iterations
 
-function [X, Y] = ALSOptimizationW(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon, max_iter, restart)
+function [X, Y] = ALSOptimizationW(A, B, x, y, dt, r, BX, BY, epsilon, max_iter, restart)
 
-    residual = ALSEnergy(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
+    residual =  ALSEnergyPlus(A, B, x, y, dt, r, BX, BY, epsilon);
+    %residual = ALSEnergy(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
 
     x_opt = x;
     y_opt = y;
     n = 1;
 
-    convergence_iterations = 3;
+    convergence_iterations = 10;
     %restart = 5;
     % [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
     % [AXALS,AYALS] = LowRankMatVec(A,B,x,y);
@@ -194,8 +201,9 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, k
     % %%%%%[BXc,BYc]=CompressData(FX, FY, epsilon);
     % [BXc,BYc]=CompressData(FXALS, FYALS, epsilon);
 
-    
-    [BXc, BYc] = CalculateBoundaries(x, y, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon);
+    BXc = BX;
+    BYc = BY;
+    %[BXc, BYc] = CalculateBoundaries(x, y, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon);
 
     %Adt= each slice of A is multiplied by (dt/2)
     %also I need to add (1-dt*r/2)I(nsxns) and this will be another stack
@@ -206,12 +214,15 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, k
     %ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)
     Ap = APrepared(A,dt,r);
     Bp = BPrepared(B);
-    [x_opt, y_opt] = ALSOptimizationV04(Ap, Bp, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
+    residual =  ALSEnergyPlus(Ap, Bp, x, y, dt, r, BX, BY, epsilon);
+    [x_opt, y_opt] = ALSOptimizationV04(Ap, Bp, x_opt, y_opt, BXc, BYc, dt, r, epsilon, max_iter, restart);
 
     while abs(residual) > epsilon 
-        [BXc, BYc] = CalculateBoundaries(x_opt, y_opt, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon);
-        [x_opt, y_opt] = ALSOptimizationV04(Ap, Bp, x_opt, y_opt, BXc, BYc, epsilon, max_iter, restart);
-        residual = ALSEnergy(Ap, Bp, x_opt, y_opt, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
+        %[BXc, BYc] = CalculateBoundaries(x_opt, y_opt, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon);
+        [x_opt, y_opt] = ALSOptimizationV04(Ap, Bp, x_opt, y_opt, BXc, BYc, dt, r, epsilon, max_iter, restart);
+        residual = ALSEnergyPlus(Ap, Bp, x_opt, y_opt, dt, r, BX, BY, epsilon);
+        %residual = ALSEnergyPlus(A, B, x, y, dt, r, BX, BY, epsilon);
+        %residual = ALSEnergy(Ap, Bp, x_opt, y_opt, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
         n = n+1;
         % if n>max_iter
         %     break
@@ -268,6 +279,50 @@ function [Bx, By] = CalculateBoundaries(x, y, A, B, NS, NV, ds, dv, S, V, r, q, 
 
 end
 
+function residual = ALSEnergyPlus(A, B, x, y, dt, r, BX, BY, epsilon)
+
+    %[BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
+
+    [AXALS,AYALS] = LowRankMatVec(A,B,x,y);
+    % FXALS = [(1-r*dt/2)*x,  (dt/2)*AXALS, dt*BX]; 
+    % FYALS = [           y,         AYALS,    BY];
+    % 
+    % [BXcALS,BYcALS]=CompressData(FXALS, FYALS, epsilon);
+
+    FXALS = [(1-r*dt/2)*x,  (dt/2)*AXALS, dt*BX]; 
+    FYALS = [           y,         AYALS,    BY];
+
+    %Right hand side vector components
+    %%%%%[BXc,BYc]=CompressData(FX, FY, epsilon);
+    [BXcALS,BYcALS]=CompressData(FXALS, FYALS, epsilon);
+
+
+    szA = size(A);
+    R = szA(3);
+    sx=size(x);
+    r = sx(2);
+
+    YB =LowRankMatVecStacked(B,y);
+    YBY =LowRankMatVecStacked(YB,y);
+    XA =LowRankMatVecStacked(A,x);
+    XAX =LowRankMatVecStacked(XA,x);
+
+    xv = reshape(YBY,r*r*R,1);
+    yv = reshape(XAX,r*r*R,1);
+
+    one_side = xv'*yv;
+    
+    xBx = x'*BXcALS;
+    yBYc = y'*BYcALS;
+
+    s= size(xBx);
+    one = reshape(xBx,s(1)*s(2),1);
+    two = reshape(yBYc,1,s(1)*s(2));
+    other_side = two*one;
+
+    residual = 0.5*(one_side) - other_side;
+end
+
 function residual = ALSEnergy(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon)
 
     [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
@@ -313,7 +368,7 @@ function residual = ALSEnergy(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa,
 end
 
 
-function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)
+function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, dt, r, epsilon, max_iter, restart)
 
     szA = size(A);
     NS = szA(1);
@@ -362,14 +417,14 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
     % sx0=zeros(NS*r,1);
     x0=reshape(x,NS*r,1);
 
-    q = 0;
-    dAx = ndims(A_hat_matrix);
-    if dAx ~= 2
-        q = 1;
-        A_hat_matrix = reshape(A_hat_matrix,NS,NS);
-    else
-        q = 2;
-    end
+    % q = 0;
+    % dAx = ndims(A_hat_matrix);
+    % if dAx ~= 2
+    %     q = 1;
+    %     A_hat_matrix = reshape(A_hat_matrix,NS,NS);
+    % else
+    %     q = 2;
+    % end
 
 
 
@@ -380,6 +435,8 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
 
     X_OptR = reshape(X_Opt,NS,r);
 
+    % residual = ALSEnergyPlus(A, B, x, y, dt, r, BXc, BYc, epsilon);
+    % residual = ALSEnergyPlus(A, B, X_OptR, y, dt, r, BXc, BYc, epsilon);
     % if r == 1
     %     X_OptR = X_Opt;
     % end
@@ -419,13 +476,13 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
     y0 = reshape(y,NV*r,1);
     %y0=y;
 
-    dAy = ndims(A_hatY_matrix);
-    if dAy ~= 2
-        q = 1;
-        A_hatY_matrix = reshape(A_hatY_matrix,NV,NV);
-    else
-        q = 2;
-    end
+    % dAy = ndims(A_hatY_matrix);
+    % if dAy ~= 2
+    %     q = 1;
+    %     A_hatY_matrix = reshape(A_hatY_matrix,NV,NV);
+    % else
+    %     q = 2;
+    % end
 
     %Y_Opt = A_hatY_matrix \ b_hatY_vector;
     %[X_Opt, flag, relres, iter] 
