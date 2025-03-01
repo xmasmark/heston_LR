@@ -135,19 +135,33 @@ function U = HestonExplicitClassicCNALSDev04(params,K,r,q,S,V,T, mode, iteration
     % xALS = X;
     % yALS = Y;
 
+    [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+
+    %Adt= each slice of A is multiplied by (dt/2)
+    %also I need to add (1-dt*r/2)I(nsxns) and this will be another stack
+    %so the rank will be R+1 rather than R
+    %Bdt will be a sline I(nvxnv) and the rest stays
+    %in both cases, the last slice goes last
+
+    % Ap = APrepared(A,dt,r);
+    % Bp = BPrepared(B);
+    
+    Ap = APrepared(A,dt,r);
+    Bp = BPrepared(B);
 
     for t = 1:NT-1
-        tol = 1e-5;  % Tolerance for convergence and compression
 
-        [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
-        [AX,AY] = LowRankMatVec(A,B,x,y);
+        % Needed for GMRES
+        % [X, Y] = CompressData(X, Y, epsilon);
+
+        [AX,AY] = LowRankMatVec(Ap,Bp,xALS,yALS);
         %BX and BY are constants at each iteration so they shouldn't be
         %recalculated.
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
 
         %half Euler step
-        FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
-        FY = [           y,         AY,    BY];
+        FX = [(1-r*dt/2)*xALS,  (dt/2)*AX, dt*BX]; 
+        FY = [           yALS,         AY,    BY];
 
         %Right hand side vector components
         [BXc,BYc]=CompressData(FX, FY, epsilon);
@@ -155,12 +169,20 @@ function U = HestonExplicitClassicCNALSDev04(params,K,r,q,S,V,T, mode, iteration
 
         %[xALS,yALS]=CompressData(xALS,yALS,tol);
 
-        [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
+         % [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
         max_iter = iterations;  % Maximum number of iterations
         
-        [xALS,yALS]=ALSOptimizationW(A, B, xALS, yALS, dt, r, BXc, BYc, epsilon, max_iter, restart);
+
+        [xALS,yALS]=ALSOptimizationW(Ap, Bp, xALS, yALS, dt, r, BXc, BYc, epsilon, max_iter, restart);
         %[xALS,yALS]=ALSOptimizationW(A, B, xALS, yALS, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon, max_iter, restart);
-        % [X, Y] = GMRES_LowRankV01(X,Y, A, B, r, BXc, BYc, X, Y, restart, tol, max_iter, dt);
+
+        % [X, Y] = GMRES_LowRankV01(X, Y, A, B, r, BXc, BYc, X, Y, restart, epsilon, max_iter, dt);
+        % 
+        % % residualALS =  ALSEnergyPlus(A, B, xALS, yALS, dt, r, BXc, BYc, epsilon);
+        % Ap = APrepared(A,dt,r);
+        % Bp = BPrepared(B);
+        % 
+        % residualGMRES =  ALSEnergyPlus(Ap, Bp, X, Y, dt, r, BXc, BYc, epsilon);
         % U = xALS*yALS';
         % U2 = X*Y';
         % dif = norm(U-U2,'fro');
@@ -169,7 +191,6 @@ function U = HestonExplicitClassicCNALSDev04(params,K,r,q,S,V,T, mode, iteration
     U= xALS*yALS';
     % U2 = X*Y';
 end
-
 
 
 % ALS stands for Alternating Linear Scheme  
@@ -182,51 +203,22 @@ end
 
 function [X, Y] = ALSOptimizationW(A, B, x, y, dt, r, BX, BY, epsilon, max_iter, restart)
 
-    residual =  ALSEnergyPlus(A, B, x, y, dt, r, BX, BY, epsilon);
-    %residual = ALSEnergy(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
+    % residual =  ALSEnergyPlus(A, B, x, y, dt, r, BX, BY, epsilon);
 
     x_opt = x;
     y_opt = y;
     n = 1;
 
-    convergence_iterations = 10;
-    %restart = 5;
-    % [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
-    % [AXALS,AYALS] = LowRankMatVec(A,B,x,y);
-    % 
-    % FXALS = [(1-r*dt/2)*x,  (dt/2)*AXALS, dt*BX]; 
-    % FYALS = [           y,         AYALS,    BY];
-    % 
-    % %Right hand side vector components
-    % %%%%%[BXc,BYc]=CompressData(FX, FY, epsilon);
-    % [BXc,BYc]=CompressData(FXALS, FYALS, epsilon);
+    convergence_iterations = 3;
 
-    BXc = BX;
-    BYc = BY;
-    %[BXc, BYc] = CalculateBoundaries(x, y, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon);
-
-    %Adt= each slice of A is multiplied by (dt/2)
-    %also I need to add (1-dt*r/2)I(nsxns) and this will be another stack
-    %so the rank will be R+1 rather than R
-    %Bdt will be a sline I(nvxnv) and the rest stays
-    %in both cases, the last slice goes last
-
-    %ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)
-    Ap = APrepared(A,dt,r);
-    Bp = BPrepared(B);
-    residual =  ALSEnergyPlus(Ap, Bp, x, y, dt, r, BX, BY, epsilon);
-    [x_opt, y_opt] = ALSOptimizationV04(Ap, Bp, x_opt, y_opt, BXc, BYc, dt, r, epsilon, max_iter, restart);
+    residual =  ALSEnergyPlus(A, B, x, y, BX, BY);
+    [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, dt, r, epsilon, max_iter, restart);
 
     while abs(residual) > epsilon 
-        %[BXc, BYc] = CalculateBoundaries(x_opt, y_opt, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon);
-        [x_opt, y_opt] = ALSOptimizationV04(Ap, Bp, x_opt, y_opt, BXc, BYc, dt, r, epsilon, max_iter, restart);
-        residual = ALSEnergyPlus(Ap, Bp, x_opt, y_opt, dt, r, BX, BY, epsilon);
-        %residual = ALSEnergyPlus(A, B, x, y, dt, r, BX, BY, epsilon);
-        %residual = ALSEnergy(Ap, Bp, x_opt, y_opt, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
+        [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, dt, r, epsilon, max_iter, restart);
+        residual = ALSEnergyPlus(A, B, x_opt, y_opt, BX, BY);
         n = n+1;
-        % if n>max_iter
-        %     break
-        % end
+
         if n > convergence_iterations
             break
         end
@@ -234,7 +226,6 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, dt, r, BX, BY, epsilon, max_iter,
 
     X = x_opt;
     Y = y_opt;
-    %[X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon);
 end
 
 function [Adt] = APrepared(A,dt, r)
@@ -265,6 +256,64 @@ function [Bdt] = BPrepared(B)
     Bdt(:,:,6)=Last;
 end
 
+function [X, Y] = ALSOptimizationW_old(A, B, x, y, dt, r, BX, BY, epsilon, max_iter, restart)
+
+    residual =  ALSEnergyPlus(A, B, x, y, dt, r, BX, BY, epsilon);
+    %residual2 = ALSEnergy(A, B, x, y, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
+
+    x_opt = x;
+    y_opt = y;
+    n = 1;
+
+    convergence_iterations = 10;
+    %restart = 5;
+    % [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
+    % [AXALS,AYALS] = LowRankMatVec(A,B,x,y);
+    % 
+    % FXALS = [(1-r*dt/2)*x,  (dt/2)*AXALS, dt*BX]; 
+    % FYALS = [           y,         AYALS,    BY];
+    % 
+    % %Right hand side vector components
+    % %%%%%[BXc,BYc]=CompressData(FX, FY, epsilon);
+    % [BXc,BYc]=CompressData(FXALS, FYALS, epsilon);
+
+    BXc = BX;
+    BYc = BY;
+    %[BXc, BYc] = CalculateBoundaries(x, y, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon);
+
+    %Adt= each slice of A is multiplied by (dt/2)
+    %also I need to add (1-dt*r/2)I(nsxns) and this will be another stack
+    %so the rank will be R+1 rather than R
+    %Bdt will be a sline I(nvxnv) and the rest stays
+    %in both cases, the last slice goes last
+
+    %ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)
+    Ap = APrepared(A,dt,r);
+    Bp = BPrepared(B);
+    residual =  ALSEnergyPlus(Ap, Bp, x, y, BX, BY);
+    [x_opt, y_opt] = ALSOptimizationV04(Ap, Bp, x_opt, y_opt, BXc, BYc, dt, r, epsilon, max_iter, restart);
+
+    while abs(residual) > epsilon 
+        %[BXc, BYc] = CalculateBoundaries(x_opt, y_opt, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon);
+        [x_opt, y_opt] = ALSOptimizationV04(Ap, Bp, x_opt, y_opt, BXc, BYc, dt, r, epsilon, max_iter, restart);
+        residual = ALSEnergyPlus(Ap, Bp, x_opt, y_opt, BX, BY);
+        %residual = ALSEnergyPlus(A, B, x, y, dt, r, BX, BY, epsilon);
+        %residual = ALSEnergy(Ap, Bp, x_opt, y_opt, dt, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, epsilon);
+        n = n+1;
+        % if n>max_iter
+        %     break
+        % end
+        if n > convergence_iterations
+            break
+        end
+    end
+
+    X = x_opt;
+    Y = y_opt;
+    %[X, Y] = ALSOptimizationV02(A, B, x, y, BXc, BYc, epsilon);
+end
+
+
 function [Bx, By] = CalculateBoundaries(x, y, A, B, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, dt, epsilon)
 
     [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
@@ -279,41 +328,35 @@ function [Bx, By] = CalculateBoundaries(x, y, A, B, NS, NV, ds, dv, S, V, r, q, 
 
 end
 
-function residual = ALSEnergyPlus(A, B, x, y, dt, r, BX, BY, epsilon)
+function residual = ALSEnergyPlus(A, B, x, y, BXc, BYc)
 
-    %[BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
-
-    [AXALS,AYALS] = LowRankMatVec(A,B,x,y);
+    % [AXALS,AYALS] = LowRankMatVec(A,B,x,y);
+    % 
     % FXALS = [(1-r*dt/2)*x,  (dt/2)*AXALS, dt*BX]; 
     % FYALS = [           y,         AYALS,    BY];
     % 
     % [BXcALS,BYcALS]=CompressData(FXALS, FYALS, epsilon);
-
-    FXALS = [(1-r*dt/2)*x,  (dt/2)*AXALS, dt*BX]; 
-    FYALS = [           y,         AYALS,    BY];
-
-    %Right hand side vector components
-    %%%%%[BXc,BYc]=CompressData(FX, FY, epsilon);
-    [BXcALS,BYcALS]=CompressData(FXALS, FYALS, epsilon);
-
 
     szA = size(A);
     R = szA(3);
     sx=size(x);
     r = sx(2);
 
-    YB =LowRankMatVecStacked(B,y);
-    YBY =LowRankMatVecStacked(YB,y);
-    XA =LowRankMatVecStacked(A,x);
-    XAX =LowRankMatVecStacked(XA,x);
+    YB = pagemtimes(B,y);
+    YBt = permute(YB,[2,1,3]); %transpose each layer of YB
+    YBY = pagemtimes(YBt,y);
+
+    XA = pagemtimes(A,x);
+    XAt = permute(XA,[2,1,3]); %transpose each layer of XA
+    XAX = pagemtimes(XAt,x);
 
     xv = reshape(YBY,r*r*R,1);
     yv = reshape(XAX,r*r*R,1);
 
     one_side = xv'*yv;
     
-    xBx = x'*BXcALS;
-    yBYc = y'*BYcALS;
+    xBx = x'*BXc;
+    yBYc = y'*BYc;
 
     s= size(xBx);
     one = reshape(xBx,s(1)*s(2),1);
@@ -381,12 +424,11 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, dt, r, epsilon, max_i
 
     %sol    ving for X
     %left hand side part of CN also called Y*B*Y in the notes
-    YB =LowRankMatVecStacked(B,y);
-    %ybyp = permute(y' * reshape(B, NV, []), [1, 3, 2]);
-    %YBpp = reshape(reshape(B, NV, NV*R) * y', NV, r, R);
-    %P(:,:,n)=(LR'*M(:,:,n))';
-
-    YBY =LowRankMatVecStacked(YB,y);
+    % YB =LowRankMatVecStacked(B,y);
+    YB = pagemtimes(B,y);
+    YBt = permute(YB,[2,1,3]);
+    %YBY =LowRankMatVecStacked(YBt,y);
+    YBY = pagemtimes(YBt,y);
 
     %AR = reshape(A,szA(1)*szA(1),szA(3));
     AR = reshape(A,NS*NS,R);
@@ -445,8 +487,12 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, dt, r, epsilon, max_i
     % end
 
     %solving for Y
-    XA =LowRankMatVecStacked(A,X_OptR);
-    XAX =LowRankMatVecStacked(XA,X_OptR);
+    % XA =LowRankMatVecStacked(A,X_OptR);
+    XA = pagemtimes(A,X_OptR);
+    XAt = permute(XA,[2,1,3]);
+    %XAX =LowRankMatVecStacked(XAt,X_OptR);
+    XAX = pagemtimes(XAt, X_OptR);
+
     BR = reshape(B,NV*NV,R);
     XAXR = reshape(XAX,r*r,R);
 
@@ -859,13 +905,27 @@ end
 %the operator M is composed by R layers, one layer for each
 %operator component so the result of this should be R new layers where the
 %operator has worked each of its components on the low rank structure
+
 function [P] = LowRankMatVecStacked(M,LR)
-    szA = size(M);
-    P = [];
-    for n = 1:szA(3)
-        P(:,:,n)=(LR'*M(:,:,n))';
-    end
+    % szA = size(M);
+    % P = [];
+    % for n = 1:szA(3)
+    %     P(:,:,n)=(M(:,:,n)*LR);
+    % end
+    P = pagemtimes(M, LR);
 end
+
+% function P = LowRankMatVecStacked(M, LR)
+%     P = permute(pagemtimes(LR', M), [2, 1, 3]);
+% end
+
+% function [P] = LowRankMatVecStackedD(X,Y)
+%     szA = size(X);
+%     P = [];
+%     for n = 1:szA(3)
+%         P(:,:,n)=(Y'*X(:,:,n))';
+%     end
+% end
 
 
 function [P] = LowRankMatVecSingle(M,LR)
