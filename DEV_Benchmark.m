@@ -129,7 +129,7 @@ restart = 3;
 
 %P = HestonExplicitClassicCN_GMRS(params,K,r,q,S,V,T);
 tic
-UvHEClassicCNXYdev = HestonExplicitClassicCNXYRC02(params,K,r,q,Sm,Vm,T,2, iterations, restart);
+UvHEClassicCNXYdev = HestonExplicitClassicCNXYRC04(params,K,r,q,Sm,Vm,T,2, iterations, restart);
 timeElapsedXY = toc;
 
 tic

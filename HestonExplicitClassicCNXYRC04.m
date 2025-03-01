@@ -129,6 +129,8 @@ function U = HestonExplicitClassicCNXYRC04(params,K,r,q,S,V,T, mode, iterations,
     b5x = rho * sigma * SMatrix * b5x;
     b5y = VMatrix'*b5y;
 
+    [A,B] = HestonModelOperatorLean(A1KX,A1KY,A2KX,A2KY,A3KX,A3KY,A4KX,A4KY,A5KX,A5KY);
+
     for t = 1:NT-1
 
         discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
@@ -141,7 +143,7 @@ function U = HestonExplicitClassicCNXYRC04(params,K,r,q,S,V,T, mode, iterations,
         % y = Y;
 
         % [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
-        [A,B] = HestonModelOperatorLean(A1KX,A1KY,A2KX,A2KY,A3KX,A3KY,A4KX,A4KY,A5KX,A5KY);
+        
         [AX,AY] = LowRankMatVec(A,B,x,y);
         % [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
 

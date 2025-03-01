@@ -166,6 +166,27 @@ function U = HestonExplicitClassicCNALSDev05(params,K,r,q,S,V,T, mode, iteration
 
         [xALS,yALS]=ALSOptimizationW(Ap, Bp, xALS, yALS, BXc, BYc, epsilon, max_iter, restart);
 
+
+
+        % % % % % % % tol = 1e-5;  % Tolerance for convergence and compression
+        % % % % % % % discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
+        % % % % % % % b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
+        % % % % % % % 
+        % % % % % % % %tol = 1e-5;  % Tolerance for convergence and compression
+        % % % % % % % [x,y]=CompressData(X,Y,tol);
+        % % % % % % % [AX,AY] = LowRankMatVec(A,B,x,y);
+        % % % % % % % [BX,BY] = HestonMatVecBoundariesLean(b1x,b2x,b3x,b4x,b5x,b1y,b2y,b3y,b4y,b5y);
+        % % % % % % % %half Euler step
+        % % % % % % % FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
+        % % % % % % % FY = [           y,         AY,    BY];
+        % % % % % % % %Right hand side vector components
+        % % % % % % % [BXc,BYc]=CompressData(FX, FY, tol);
+        % % % % % % % 
+        % % % % % % % max_iter = iterations;  % Maximum number of iterations
+        % % % % % % % 
+        % % % % % % % [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
+        % % % % % % % 
+
     end    
     %U=X*Y';
     U= xALS*yALS';
