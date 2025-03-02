@@ -184,11 +184,12 @@ function U = HestonExplicitClassicCNALSDev05(params,K,r,q,S,V,T, mode, iteration
         % % % % % % % 
         % % % % % % % max_iter = iterations;  % Maximum number of iterations
         % % % % % % % 
+        % % % % % % % residualPre =  ALSEnergyPlus(A, B, x, y, BXc, BYc);
         % % % % % % % [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
-        % % % % % % % 
+        % % % % % % % residualPost =  ALSEnergyPlus(A, B, X, Y, BXc, BYc);
 
     end    
-    %U=X*Y';
+    % U=X*Y';
     U= xALS*yALS';
     % U2 = X*Y';
 end
