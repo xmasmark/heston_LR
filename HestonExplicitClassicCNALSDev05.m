@@ -151,6 +151,30 @@ function U = HestonExplicitClassicCNALSDev05(params,K,r,q,S,V,T, mode, iteration
 
     for t = 1:NT-1
 
+        tol = 1e-5;  % Tolerance for convergence and compression
+        discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
+        b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
+
+        %tol = 1e-5;  % Tolerance for convergence and compression
+        [x,y]=CompressData(X,Y,tol);
+        [AX,AY] = LowRankMatVec(A,B,x,y);
+        [BX,BY] = HestonMatVecBoundariesLean(b1x,b2x,b3x,b4x,b5x,b1y,b2y,b3y,b4y,b5y);
+        %half Euler step
+        FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
+        FY = [           y,         AY,    BY];
+        %Right hand side vector components
+        [BXc,BYc]=CompressData(FX, FY, tol);
+
+        max_iter = iterations;  % Maximum number of iterations
+
+        residualPre =  ALSEnergyPlus(A, B, x, y, BXc, BYc);
+        [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
+        residualPost =  ALSEnergyPlus(A, B, X, Y, BXc, BYc);
+
+        % xALS = X;
+        % yALS = Y;
+        [xALS,yALS]=CompressData(X,Y,tol);
+
         [AX,AY] = LowRankMatVec(Ap,Bp,xALS,yALS);
         %BX and BY are constants at each iteration
         [BX,BY] = HestonMatVecBoundaries(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T);
@@ -165,28 +189,10 @@ function U = HestonExplicitClassicCNALSDev05(params,K,r,q,S,V,T, mode, iteration
         max_iter = iterations;  % Maximum number of iterations
 
         [xALS,yALS]=ALSOptimizationW(Ap, Bp, xALS, yALS, BXc, BYc, epsilon, max_iter, restart);
-
-
-
-        % % % % % % % tol = 1e-5;  % Tolerance for convergence and compression
-        % % % % % % % discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
-        % % % % % % % b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
-        % % % % % % % 
-        % % % % % % % %tol = 1e-5;  % Tolerance for convergence and compression
-        % % % % % % % [x,y]=CompressData(X,Y,tol);
-        % % % % % % % [AX,AY] = LowRankMatVec(A,B,x,y);
-        % % % % % % % [BX,BY] = HestonMatVecBoundariesLean(b1x,b2x,b3x,b4x,b5x,b1y,b2y,b3y,b4y,b5y);
-        % % % % % % % %half Euler step
-        % % % % % % % FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
-        % % % % % % % FY = [           y,         AY,    BY];
-        % % % % % % % %Right hand side vector components
-        % % % % % % % [BXc,BYc]=CompressData(FX, FY, tol);
-        % % % % % % % 
-        % % % % % % % max_iter = iterations;  % Maximum number of iterations
-        % % % % % % % 
-        % % % % % % % residualPre =  ALSEnergyPlus(A, B, x, y, BXc, BYc);
-        % % % % % % % [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
-        % % % % % % % residualPost =  ALSEnergyPlus(A, B, X, Y, BXc, BYc);
+        
+        firstNorm = norm(X*Y','fro');
+        secondNorm = norm(xALS*yALS','fro');
+        difference = norm(X*Y'-xALS*yALS','fro');
 
     end    
     % U=X*Y';
@@ -211,7 +217,7 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
     y_opt = y;
     n = 1;
 
-    convergence_iterations = 3;
+    convergence_iterations = 1;
 
     residual =  ALSEnergyPlus(A, B, x, y, BX, BY);
     [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
@@ -335,6 +341,10 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
 
     X_OptR = reshape(X_Opt,NS,r);
 
+    relativeErrorX = norm(x*y'-X_OptR*y','fro')/norm(X_OptR*y','fro');
+
+
+
 
     % oldEnergy = ALSEnergyPlus(A, B, x, y, BXc, BYc);
     % newEnergy = ALSEnergyPlus(A, B, X_OptR, y, BXc, BYc);
@@ -344,30 +354,36 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
     XAt = permute(XA,[2,1,3]);
     XAX = pagemtimes(XAt, X_OptR);
 
+    YB = pagemtimes(B,y);
+    YBready = reshape(YB,NV*r,R);
     BR = reshape(B,NV*NV,R);
     XAXR = reshape(XAX,r*r,R);
 
-    ahY = BR*XAXR';
-    A_hatY = reshape(ahY,NV,NV,r,r);
+    % ahY = BR*XAXR';
+    ahY = YBready*XAXR';
+    %A_hatY = reshape(ahY,NV,NV,r,r);
+    A_hatY = reshape(ahY,NV*r,r*r);
 
     X_BXc=X_OptR'*BXc;
     b_hatY_vector = X_BXc*BYc';
+    b_hatY_vector = reshape(b_hatY_vector,NV*r,1);
 
-    if r>1
-        %bHat=X_OptR'*BXc*BYc';
-        %A_hatY -- sizes are NV, NV, r and r
-        A_hatYP = permute(A_hatY,[1,3,2,4]);
-        %A_hatYP = permute(A_hatY,[2,4,1,3]);
-        A_hatY_matrix = reshape(A_hatYP,NV*r,NV*r);
-        b_hatY_vector = reshape(b_hatY_vector,NV*r,1);
-        %Y_Opt = A_hatY_matrix \ b_hatY_vector;
-    end
-    if r==1
-       %A_hatY_matrix = reshape(A_hatY,NV*r,NV*r);
-       A_hatY_matrix = A_hatY;
-       b_hatY_vector = b_hatY_vector';
-       %Y_Opt = A_hatY \ b_hatY_vector';
-    end
+    A_hatY_matrix = A_hatY;
+    % if r>1
+    %     %bHat=X_OptR'*BXc*BYc';
+    %     %A_hatY -- sizes are NV, NV, r and r
+    %     %A_hatYP = permute(A_hatY,[1,3,2,4]); -- no need for this?
+    %     %A_hatYP = permute(A_hatY,[2,4,1,3]);
+    %     %A_hatY_matrix = reshape(A_hatYP,NV*r,NV*r);-- no need for this?
+    %     %b_hatY_vector = reshape(b_hatY_vector,NV*r,1);
+    %     %Y_Opt = A_hatY_matrix \ b_hatY_vector;
+    % end
+    % if r==1
+    %    %A_hatY_matrix = reshape(A_hatY,NV*r,NV*r);
+    %    %A_hatY_matrix = A_hatY;
+    %    %b_hatY_vector = b_hatY_vector';
+    %    %Y_Opt = A_hatY \ b_hatY_vector';
+    % end
 
     y0 = reshape(y,NV*r,1);
 
@@ -378,6 +394,8 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
    
     X_Opt = reshape(X_Opt,NS,r);
     Y_Opt = reshape(Y_Opt,NV,r);
+
+    relativeErrorY = norm(x*y'-X_OptR*Y_Opt','fro')/norm(X_OptR*Y_Opt','fro');
 
     %calculation of residuals to control the progress
 
