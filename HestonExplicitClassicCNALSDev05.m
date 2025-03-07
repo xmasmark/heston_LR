@@ -217,7 +217,7 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
     y_opt = y;
     n = 1;
 
-    convergence_iterations = 1;
+    convergence_iterations = 3;
 
     residual =  ALSEnergyPlus(A, B, x, y, BX, BY);
     [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
