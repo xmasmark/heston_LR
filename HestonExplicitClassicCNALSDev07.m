@@ -1,4 +1,4 @@
-function U = HestonExplicitClassicCNALSDev06(params,K,r,q,S,V,T, mode, iterations, restart)
+function U = HestonExplicitClassicCNALSDev07(params,K,r,q,S,V,T, mode, iterations, restart)
 
     %mode is to decide the system resolution:
     %0--> Euler
@@ -152,7 +152,6 @@ function U = HestonExplicitClassicCNALSDev06(params,K,r,q,S,V,T, mode, iteration
     for t = 1:NT-1
 
         tol = 1e-5;  % Tolerance for convergence and compression
-        
         discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
         b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
 
@@ -174,7 +173,7 @@ function U = HestonExplicitClassicCNALSDev06(params,K,r,q,S,V,T, mode, iteration
 
         % xALS = X;
         % yALS = Y;
-        [xALS,yALS]=CompressData(xALS,yALS,tol);
+        % [xALS,yALS]=CompressData(X,Y,tol);
 
         [AX,AY] = LowRankMatVec(Ap,Bp,xALS,yALS);
         %BX and BY are constants at each iteration
@@ -193,7 +192,7 @@ function U = HestonExplicitClassicCNALSDev06(params,K,r,q,S,V,T, mode, iteration
         
         firstNorm = norm(X*Y','fro');
         secondNorm = norm(xALS*yALS','fro');
-        difference = norm(X*Y'-xALS*yALS','fro');
+        % difference = norm(X*Y'-xALS*yALS','fro');
         fprintf('XY norm: %d, xALSyALS norm: %.4e\n', firstNorm, secondNorm);
 
     end    
@@ -227,13 +226,6 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
     while abs(residual) > epsilon 
         [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
         residual = ALSEnergyPlus(A, B, x_opt, y_opt, BX, BY);
-
-        if(abs(residual)>epsilon)
-            [x_opt, y_opt] = increase_rank(x_opt,y_opt, A, B, 50, epsilon);
-        end
-
-        % residualIR = ALSEnergyPlus(A, B, X_new, Y_new, BX, BY);
-
         n = n+1;
 
         if n > convergence_iterations
@@ -244,112 +236,6 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
     X = x_opt;
     Y = y_opt;
 end
-
-function [X_new, Y_new] = increase_rank(X, Y, A, B, max_rank, tol)
-    % Increase the rank of low-rank factors X and Y without forming U explicitly.
-    % Inputs:
-    %   X, Y - Initial low-rank factors (start as rank-1)
-    %   A, B - Operator matrices (acting on X and Y separately)
-    %   max_rank - Maximum rank allowed
-    %   tol - Residual tolerance for stopping criteria
-    % Outputs:
-    %   X_new, Y_new - Updated low-rank factors with increased rank
-    
-    % Define function handles for applying A and B
-    % apply_A = @(V) A * V;  % Apply A to X
-    % apply_B = @(V) B * V;  % Apply B to Y
-
-    apply_A = @(V) sum_A(V, A);  % Applies all layers of A to V 
-    apply_B = @(V) sum_B(V, B);  % Applies all layers of B to V    
-
-    % Ensure A and B are well-defined
-    if isempty(A) || isempty(B)
-        error('Matrices A and B are undefined. Pass A and B as arguments.');
-    end
-
-    % Call rank-increasing algorithm
-    [X_new, Y_new] = increase_rank_approx(X, Y, apply_A, apply_B, max_rank, tol);
-end
-
-function [X_new, Y_new] = increase_rank_approx(X, Y, apply_A, apply_B, max_rank, tol)
-    % Increase the rank of low-rank factors X and Y WITHOUT forming U.
-    % Inputs:
-    %   X, Y - Initial low-rank factors (both start as vectors, rank 1)
-    %   apply_A - Function handle that applies A to X
-    %   apply_B - Function handle that applies B to Y
-    %   max_rank - Maximum rank allowed
-    %   tol - Stopping tolerance based on residual norm
-    % Outputs:
-    %   X_new, Y_new - Updated low-rank factors with increased rank
-
-    % Initial rank
-    r = size(X, 2);
-    
-    while r < max_rank
-        % Compute approximate residuals with correct operator applications
-        aA = apply_A(X);
-        aB = apply_B(Y);
-
-        % R_X = apply_A(X) + X * apply_B(Y)'; % Apply A to X, B to Y
-        % R_Y = apply_B(Y) + Y * apply_A(X)'; % Apply B to Y, A to X
-
-        R_X = apply_A(X) + (X * (Y' * apply_B(Y))); % Now (NS, r)
-        R_Y = apply_B(Y) + (Y * (X' * apply_A(X))); % Now (NV, r)        
-
-        % % Solve small least-squares problem to find new directions
-        % [Q_X, ~] = qr(R_X - X * (X' \ R_X), 0); % Orthogonalize new basis for X
-        % [Q_Y, ~] = qr(R_Y - Y * (Y' \ R_Y), 0); % Orthogonalize new basis for Y
-        % 
-
-        % Solve small least-squares problem using SVD (more stable)
-        %use the Moore-Penrose Pseudoinverse:
-        [U_X, ~, ~] = svd(R_X - X * (pinv(X) * R_X), 'econ');
-        [U_Y, ~, ~] = svd(R_Y - Y * (pinv(Y) * R_Y), 'econ');
-
-        Q_X = U_X(:, 1); % Take first singular vector
-        Q_Y = U_Y(:, 1); % Take first singular vector        
-        
-        % Expand X and Y
-        X = [X, Q_X]; % Append new basis vectors
-        Y = [Y, Q_Y]; % Append new basis vectors
-        
-        % Compute approximate residual norm (AFTER expanding X and Y)
-        %res_norm = norm(R_X - X * (X' \ R_X), 'fro');
-        res_norm = norm(R_X - X * (pinv(X) * R_X), 'fro');
-        % fprintf('Current rank: %d, Approximate residual norm: %.4e\n', r+1, res_norm);
-        
-        % Stop if residual is sufficiently small
-        if res_norm < tol
-            break;
-        end
-        
-        % Update rank counter
-        r = r + 1;
-    end
-    
-    % Output the expanded matrices
-    X_new = X;
-    Y_new = Y;
-end
-
-function AX = sum_A(X, A)
-    % Applies all layers of A sequentially
-    AX = zeros(size(X));  % Initialize with zeros
-    k = size(A, 3);  % Number of layers
-    for i = 1:k
-        AX = AX + A(:,:,i) * X;  % Apply each layer and accumulate
-    end
-end
-
-function BY = sum_B(Y, B)
-    % Applies all layers of B sequentially
-    BY = zeros(size(Y));
-    k = size(B, 3);
-    for i = 1:k
-        BY = BY + B(:,:,i) * Y;  % Apply each layer and accumulate
-    end
-end
-
 
 function [Adt] = APrepared(A,dt, r)
 

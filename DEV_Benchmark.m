@@ -133,7 +133,7 @@ UvHEClassicCNXYdev = HestonExplicitClassicCNXYRC04(params,K,r,q,Sm,Vm,T,2, itera
 timeElapsedXY = toc;
 
 tic
-UvHEClassicCNXYLeanDev = HestonExplicitClassicCNALSDev06(params,K,r,q,Sm,Vm,T,2,iterations, restart);
+UvHEClassicCNXYLeanDev = HestonExplicitClassicCNALSDev07(params,K,r,q,Sm,Vm,T,2,iterations, restart);
 %UvHEClassicCNXYLeanDev = HestonExplicitClassicCNXYRC04(params,K,r,q,Sm,Vm,T,2, iterations, restart);
 timeElapsedLean = toc;
 
