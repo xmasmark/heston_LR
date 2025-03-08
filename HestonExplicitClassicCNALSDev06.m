@@ -193,7 +193,7 @@ function U = HestonExplicitClassicCNALSDev06(params,K,r,q,S,V,T, mode, iteration
         
         firstNorm = norm(X*Y','fro');
         secondNorm = norm(xALS*yALS','fro');
-        difference = norm(X*Y'-xALS*yALS','fro');
+        %difference = norm(X*Y'-xALS*yALS','fro');
         fprintf('XY norm: %d, xALSyALS norm: %.4e\n', firstNorm, secondNorm);
 
     end    
@@ -284,48 +284,160 @@ function [X_new, Y_new] = increase_rank_approx(X, Y, apply_A, apply_B, max_rank,
 
     % Initial rank
     r = size(X, 2);
-    
+
+    % Compute initial residual norm
+    % R_X = apply_A(X) + (X * apply_B(Y)');
+    % R_Y = apply_B(Y) + (Y * apply_A(X)');
+
+    % R_X = apply_A(X) + X * ((Y' * apply_B(Y)) \ eye(r));
+    % R_Y = apply_B(Y) + Y * ((X' * apply_A(X)) \ eye(r));
+    % R_X = apply_A(X) + X * (pinv(Y' * apply_B(Y)) * eye(r));
+    % R_Y = apply_B(Y) + Y * (pinv(X' * apply_A(X)) * eye(r));
+
+    % R_X = apply_A(X) + X * pinv(Y' * apply_B(Y));
+    % R_Y = apply_B(Y) + Y * pinv(X' * apply_A(X));
+
+    % R_X = apply_A(X) + X * pinv(Y' * apply_B(Y) * Y);
+    % R_Y = apply_B(Y) + Y * pinv(X' * apply_A(X) * X);
+
+    % R_X = apply_A(X) + X * pinv(Y' * apply_B(Y)) * Y';
+    % R_Y = apply_B(Y) + Y * pinv(X' * apply_A(X)) * X';
+
+    R_X = apply_A(X) + X * pinv(Y' * apply_B(Y)) * (Y' * Y);
+    R_Y = apply_B(Y) + Y * pinv(X' * apply_A(X)) * (X' * X);
+
+    res_norm = norm(R_X, 'fro') + norm(R_Y, 'fro'); % Initial residual
+    prev_res_norm = res_norm; % Store for comparison
     while r < max_rank
-        % Compute approximate residuals with correct operator applications
-        aA = apply_A(X);
-        aB = apply_B(Y);
 
-        % R_X = apply_A(X) + X * apply_B(Y)'; % Apply A to X, B to Y
-        % R_Y = apply_B(Y) + Y * apply_A(X)'; % Apply B to Y, A to X
+        try
+            % Compute residuals ensuring correct dimensions
+            R_X = apply_A(X) + X * pinv(Y' * apply_B(Y)) * (Y' * Y);
+            R_Y = apply_B(Y) + Y * pinv(X' * apply_A(X)) * (X' * X);
+        
+        catch ME  % If an error occurs, this block runs
+            fprintf('\n🚨 ERROR DETECTED! Printing debug information:\n');
+            fprintf('Error message: %s\n', ME.message);
+            
+            % Print matrix sizes to identify dimension mismatch
+            fprintf('\n🚨 ERROR DETECTED! Printing debug information:\n');
+            fprintf('Error message: %s\n', ME.message);
+            fprintf('Size of X: (%d, %d)\n', size(X,1), size(X,2));
+            fprintf('Size of Y: (%d, %d)\n', size(Y,1), size(Y,2));
+            fprintf('Size of apply_B(Y): (%d, %d)\n', size(apply_B(Y),1), size(apply_B(Y),2));
+            fprintf('Size of Y'' * apply_B(Y): (%d, %d)\n', size(Y' * apply_B(Y),1), size(Y' * apply_B(Y),2));
+            fprintf('Size of pinv(Y'' * apply_B(Y)): (%d, %d)\n', size(pinv(Y' * apply_B(Y)),1), size(pinv(Y' * apply_B(Y)),2));        
+        end
 
-        R_X = apply_A(X) + (X * (Y' * apply_B(Y))); % Now (NS, r)
-        R_Y = apply_B(Y) + (Y * (X' * apply_A(X))); % Now (NV, r)        
+        % Compute residuals in current iteration
 
-        % % Solve small least-squares problem to find new directions
-        % [Q_X, ~] = qr(R_X - X * (X' \ R_X), 0); % Orthogonalize new basis for X
-        % [Q_Y, ~] = qr(R_Y - Y * (Y' \ R_Y), 0); % Orthogonalize new basis for Y
-        % 
+        R_X = apply_A(X) + X * pinv(Y' * apply_B(Y)) * (Y' * Y);
+        R_Y = apply_B(Y) + Y * pinv(X' * apply_A(X)) * (X' * X);
+        
+        % R_X = apply_A(X) + (X * apply_B(Y)');
+        % R_Y = apply_B(Y) + (Y * apply_A(X)');
 
+        % R_X = apply_A(X) + (X * (Y' * apply_B(Y) * Y) / (Y' * Y));
+        % R_Y = apply_B(Y) + (Y * (X' * apply_A(X) * X) / (X' * X));
+
+        % R_X = apply_A(X) + X * ((Y' * apply_B(Y)) \ eye(r));
+        % R_Y = apply_B(Y) + Y * ((X' * apply_A(X)) \ eye(r));
+
+        % R_X = apply_A(X) + X * (pinv(Y' * apply_B(Y)) * eye(r));
+        % R_Y = apply_B(Y) + Y * (pinv(X' * apply_A(X)) * eye(r));
+
+        % R_X = apply_A(X) + X * pinv(Y' * apply_B(Y));
+        % R_Y = apply_B(Y) + Y * pinv(X' * apply_A(X));
+
+    
         % Solve small least-squares problem using SVD (more stable)
-        %use the Moore-Penrose Pseudoinverse:
-        [U_X, ~, ~] = svd(R_X - X * (pinv(X) * R_X), 'econ');
-        [U_Y, ~, ~] = svd(R_Y - Y * (pinv(Y) * R_Y), 'econ');
+        [U_X, S_X, ~] = svd(R_X - X * ((X' * X) \ (X' * R_X)), 'econ');
+        [U_Y, S_Y, ~] = svd(R_Y - Y * ((Y' * Y) \ (Y' * R_Y)), 'econ');
 
-        Q_X = U_X(:, 1); % Take first singular vector
-        Q_Y = U_Y(:, 1); % Take first singular vector        
-        
-        % Expand X and Y
-        X = [X, Q_X]; % Append new basis vectors
-        Y = [Y, Q_Y]; % Append new basis vectors
-        
-        % Compute approximate residual norm (AFTER expanding X and Y)
-        %res_norm = norm(R_X - X * (X' \ R_X), 'fro');
-        res_norm = norm(R_X - X * (pinv(X) * R_X), 'fro');
-        % fprintf('Current rank: %d, Approximate residual norm: %.4e\n', r+1, res_norm);
-        
-        % Stop if residual is sufficiently small
+        idx_X = find(diag(S_X) > 1e-3, 1, 'first');
+        idx_Y = find(diag(S_Y) > 1e-3, 1, 'first');
+    
+        if isempty(idx_X), idx_X = 1; end
+        if isempty(idx_Y), idx_Y = 1; end
+    
+        Q_X = U_X(:, idx_X);
+        Q_Y = U_Y(:, idx_Y);
+    
+        % Compute residual norm after expansion
+        res_norm = norm(R_X - X * ((X' * X) \ (X' * R_X)), 'fro') + ...
+                   norm(R_Y - Y * ((Y' * Y) \ (Y' * R_Y)), 'fro');
+    
+        % Only increase rank if residual decreases significantly
+        if res_norm < 0.9 * prev_res_norm  % Require 10% improvement
+            X = [X, Q_X]; % Append new basis vectors
+            Y = [Y, Q_Y];
+
+
+            % [X,Y]=CompressData(X,Y, tol);
+
+            % Re-orthogonalize to prevent instability
+            [X, ~] = qr(X, 'econ');
+            [Y, ~] = qr(Y, 'econ');
+
+            % Find the smallest rank between X and Y
+            r_sync = min(size(X, 2), size(Y, 2));
+
+            % Keep only the first r_sync columns for synchronous QR
+            [X, ~] = qr(X(:,1:r_sync), 0);
+            [Y, ~] = qr(Y(:,1:r_sync), 0);
+
+
+            prev_res_norm = res_norm; % Update reference residual
+            r = r +1;
+        else
+            fprintf('Skipping rank increase (insufficient residual reduction)\n');
+            break;
+        end
+    
+        fprintf('Current rank: %d, Residual norm: %.4e\n', size(X, 2), res_norm);
+    
         if res_norm < tol
             break;
         end
-        
-        % Update rank counter
-        r = r + 1;
     end
+    
+    % while r < max_rank
+    %     % Compute approximate residuals with correct operator applications
+    %     aA = apply_A(X);
+    %     aB = apply_B(Y);
+    % 
+    %     % R_X = apply_A(X) + X * apply_B(Y)'; % Apply A to X, B to Y
+    %     % R_Y = apply_B(Y) + Y * apply_A(X)'; % Apply B to Y, A to X
+    % 
+    %     R_X = apply_A(X) + (X * (Y' * apply_B(Y))); % Now (NS, r)
+    %     R_Y = apply_B(Y) + (Y * (X' * apply_A(X))); % Now (NV, r)        
+    % 
+    % 
+    %     % Solve small least-squares problem using SVD (more stable)
+    %     %use the Moore-Penrose Pseudoinverse:
+    %     [U_X, ~, ~] = svd(R_X - X * (pinv(X) * R_X), 'econ');
+    %     [U_Y, ~, ~] = svd(R_Y - Y * (pinv(Y) * R_Y), 'econ');
+    % 
+    %     Q_X = U_X(:, 1); % Take first singular vector
+    %     Q_Y = U_Y(:, 1); % Take first singular vector        
+    % 
+    %     % Expand X and Y
+    %     X = [X, Q_X]; % Append new basis vectors
+    %     Y = [Y, Q_Y]; % Append new basis vectors
+    % 
+    %     % Compute approximate residual norm (AFTER expanding X and Y)
+    %     %res_norm = norm(R_X - X * (X' \ R_X), 'fro');
+    %     res_norm = norm(R_X - X * (pinv(X) * R_X), 'fro');
+    %     % fprintf('Current rank: %d, Approximate residual norm: %.4e\n', r+1, res_norm);
+    % 
+    %     % Stop if residual is sufficiently small
+    %     if res_norm < tol
+    %         break;
+    %     end
+    % 
+    %     % Update rank counter
+    %     r = r + 1;
+    % end
     
     % Output the expanded matrices
     X_new = X;
