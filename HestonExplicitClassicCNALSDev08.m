@@ -130,11 +130,14 @@ function U = HestonExplicitClassicCNALSDev08(params,K,r,q,S,V,T, mode, iteration
     x = X;
     y = Y;
 
+    % normalizedY = Y / norm(Y);
+    % orthonormal_basis = null(normalizedY');
     % xALS = [X,zeros(NS,6)];
-    % yALS = [Y,zeros(NV,6)];
+    % yALS = [Y,orthonormal_basis(:,1:6)];
+
     xALS = X;
     yALS = Y;
-
+    % 
     [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
 
     %Adt= each slice of A is multiplied by (dt/2)
@@ -219,14 +222,14 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
     y_opt = y;
     n = 1;
 
-    convergence_iterations = 3;
+    convergence_iterations = 100;
 
     residual =  ALSEnergyPlus(A, B, x, y, BX, BY);
     [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
 
     if(abs(residual)>epsilon)
         [x_opt, y_opt] = increase_rank(x_opt,y_opt, A, B, 50, epsilon);
-        [x_opt, y_opt]=CompressData(x_opt, y_opt, epsilon);
+        %[x_opt, y_opt]=CompressData(x_opt, y_opt, epsilon);
         s = size(x_opt);
         rank = s(2);
         fprintf('rank: %d \n', rank);
@@ -236,14 +239,14 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
         [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
         residual = ALSEnergyPlus(A, B, x_opt, y_opt, BX, BY);
 
-        if(abs(residual)>epsilon)
-            [x_opt, y_opt] = increase_rank(x_opt,y_opt, A, B, 50, epsilon);
-            %[x_opt, y_opt]=CompressData(x_opt, y_opt, epsilon);
-            s = size(x_opt);
-            rank = s(2);
-            fprintf('rank: %d \n', rank);
-        end
-
+        % if(abs(residual)>epsilon)
+        %     [x_opt, y_opt] = increase_rank(x_opt,y_opt, A, B, 50, epsilon);
+        %     %[x_opt, y_opt]=CompressData(x_opt, y_opt, epsilon);
+        %     s = size(x_opt);
+        %     rank = s(2);
+        %     fprintf('rank: %d \n', rank);
+        % end
+        % 
 
         % residualIR = ALSEnergyPlus(A, B, X_new, Y_new, BX, BY);
 
@@ -533,6 +536,7 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
     if r>1
 
         % A_hatYP = permute(A_hatY,[2,4,1,3]);
+        A_hatYP = permute(A_hatY,[1,3,2,4]);
         A_hatYP = A_hatY;
         A_hatY_matrix = reshape(A_hatYP,NV*r,NV*r);
         
@@ -563,6 +567,9 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
     Y_Opt = reshape(Y_Opt,NV,r);
 
     relativeErrorY = norm(x*y'-X_OptR*Y_Opt','fro')/norm(X_OptR*Y_Opt','fro');
+    % relativeErrorY = norm(x*y'-x*Y_Opt','fro')/norm(x*Y_Opt','fro');
+
+    fprintf('X relative error: %d, Y relative error: %d\n', relativeErrorX, relativeErrorY);
 
     %calculation of residuals to control the progress
 
