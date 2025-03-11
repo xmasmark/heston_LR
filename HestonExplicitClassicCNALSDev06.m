@@ -224,13 +224,26 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
     residual =  ALSEnergyPlus(A, B, x, y, BX, BY);
     [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
 
+    if(abs(residual)>epsilon)
+        [x_opt, y_opt] = increase_rank(x_opt,y_opt, A, B, 50, epsilon);
+        [x_opt, y_opt]=CompressData(x_opt, y_opt, epsilon);
+        s = size(x_opt);
+        rank = s(2);
+        fprintf('rank: %d \n', rank);
+    end
+    
     while abs(residual) > epsilon 
         [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
         residual = ALSEnergyPlus(A, B, x_opt, y_opt, BX, BY);
 
         if(abs(residual)>epsilon)
             [x_opt, y_opt] = increase_rank(x_opt,y_opt, A, B, 50, epsilon);
+            %[x_opt, y_opt]=CompressData(x_opt, y_opt, epsilon);
+            s = size(x_opt);
+            rank = s(2);
+            fprintf('rank: %d \n', rank);
         end
+
 
         % residualIR = ALSEnergyPlus(A, B, X_new, Y_new, BX, BY);
 
