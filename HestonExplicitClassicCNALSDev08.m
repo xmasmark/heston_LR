@@ -130,13 +130,13 @@ function U = HestonExplicitClassicCNALSDev08(params,K,r,q,S,V,T, mode, iteration
     x = X;
     y = Y;
 
-    % normalizedY = Y / norm(Y);
-    % orthonormal_basis = null(normalizedY');
-    % xALS = [X,zeros(NS,6)];
-    % yALS = [Y,orthonormal_basis(:,1:6)];
+    normalizedY = Y / norm(Y);
+    orthonormal_basis = null(normalizedY');
+    xALS = [X,zeros(NS,6)];
+    yALS = [Y,orthonormal_basis(:,1:6)];
 
-    xALS = X;
-    yALS = Y;
+    % xALS = X;
+    % yALS = Y;
     % 
     [A,B] = HestonModelOperator(NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho);
 
@@ -177,7 +177,7 @@ function U = HestonExplicitClassicCNALSDev08(params,K,r,q,S,V,T, mode, iteration
 
         % xALS = X;
         % yALS = Y;
-        [xALS,yALS]=CompressData(xALS,yALS,tol);
+        % [xALS,yALS]=CompressData(xALS,yALS,tol);
 
         [AX,AY] = LowRankMatVec(Ap,Bp,xALS,yALS);
         %BX and BY are constants at each iteration
@@ -192,12 +192,13 @@ function U = HestonExplicitClassicCNALSDev08(params,K,r,q,S,V,T, mode, iteration
 
         max_iter = iterations;  % Maximum number of iterations
 
-        [xALS,yALS]=ALSOptimizationW(Ap, Bp, xALS, yALS, BXc, BYc, epsilon, max_iter, restart);
+        %[xALS,yALS]=ALSOptimizationW(Ap, Bp, xALS, yALS, BXc, BYc, epsilon, max_iter, restart);
+        [xALS,yALS]=ALSOptimizationW(Ap, Bp, xALS, yALS, BXc, BYc, epsilon, max_iter, restart);        
         
-        % % % firstNorm = norm(X*Y','fro');
-        % % % secondNorm = norm(xALS*yALS','fro');
-        % % % %difference = norm(X*Y'-xALS*yALS','fro');
-        % % % fprintf('XY norm: %d, xALSyALS norm: %.4e\n', firstNorm, secondNorm);
+        % firstNorm = norm(X*Y','fro');
+        % secondNorm = norm(xALS*yALS','fro');
+        % difference = norm(X*Y'-xALS*yALS','fro');
+        % fprintf('XY norm: %d, xALSyALS norm: %.4e\n', firstNorm, secondNorm);
 
     end    
     % U=X*Y';
@@ -227,13 +228,13 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
     residual =  ALSEnergyPlus(A, B, x, y, BX, BY);
     [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
 
-    if(abs(residual)>epsilon)
-        [x_opt, y_opt] = increase_rank(x_opt,y_opt, A, B, 50, epsilon);
-        %[x_opt, y_opt]=CompressData(x_opt, y_opt, epsilon);
-        s = size(x_opt);
-        rank = s(2);
-        fprintf('rank: %d \n', rank);
-    end
+    % if(abs(residual)>epsilon)
+    %     [x_opt, y_opt] = increase_rank(x_opt,y_opt, A, B, 50, epsilon);
+    %     %[x_opt, y_opt]=CompressData(x_opt, y_opt, epsilon);
+    %     s = size(x_opt);
+    %     rank = s(2);
+    %     fprintf('rank: %d \n', rank);
+    % end
     
     while abs(residual) > epsilon 
         [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
@@ -498,6 +499,8 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
 
     x0=reshape(x,NS*r,1);
 
+    nonSymX = norm(A_hat_matrix-A_hat_matrix','fro')/norm(A_hat_matrix,'fro');
+
     %[x, flag, relres, iter]
     %[X_Opt, flag, relres, iter] = gmres_simple(A_hat_matrix, b_hat_vector, epsilon, max_iter);
     X_Opt = restarted_gmres(A_hat_matrix, b_hat_vector, x0, restart, epsilon, max_iter);
@@ -516,7 +519,7 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
     XAt = permute(XA,[2,1,3]);
     XAX = pagemtimes(XAt, X_OptR);
 
-    % YB = pagemtimes(B,y);
+    %YB = pagemtimes(B,y);
     % YBready = reshape(YB,NV*r,R);
     BR = reshape(B,NV*NV,R);
     XAXR = reshape(XAX,r*r,R);
@@ -529,15 +532,16 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
 
     X_BXc=X_OptR'*BXc;
     b_hatY_vector = X_BXc*BYc';
-    b_hatY_vector = reshape(b_hatY_vector,NV*r,1);
+    b_hatY_vector = reshape(b_hatY_vector',NV*r,1);
 
     A_hatY_matrix = A_hatY;
 
     if r>1
 
         % A_hatYP = permute(A_hatY,[2,4,1,3]);
-        A_hatYP = permute(A_hatY,[1,3,2,4]);
-        A_hatYP = A_hatY;
+        %A_hatYP = permute(A_hatY,[1,3,2,4]);
+        A_hatYP = permute(A_hatY,[2,3,1,4]);
+        %A_hatYP = A_hatY;
         A_hatY_matrix = reshape(A_hatYP,NV*r,NV*r);
         
     end
@@ -558,6 +562,8 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
 
     y0 = reshape(y,NV*r,1);
 
+    nonSymY = norm(A_hatY_matrix-A_hatY_matrix','fro')/norm(A_hatY_matrix,'fro');
+
     % Y_Opt = A_hatY_matrix \ b_hatY_vector;
     %[X_Opt, flag, relres, iter] 
     %[Y_Opt, flag, relres, iter] = gmres_simple(A_hatY_matrix, b_hatY_vector, epsilon, max_iter);
@@ -569,7 +575,7 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
     relativeErrorY = norm(x*y'-X_OptR*Y_Opt','fro')/norm(X_OptR*Y_Opt','fro');
     % relativeErrorY = norm(x*y'-x*Y_Opt','fro')/norm(x*Y_Opt','fro');
 
-    fprintf('X relative error: %d, Y relative error: %d\n', relativeErrorX, relativeErrorY);
+    %fprintf('X relative error: %d, Y relative error: %d\n', relativeErrorX, relativeErrorY);
 
     %calculation of residuals to control the progress
 
