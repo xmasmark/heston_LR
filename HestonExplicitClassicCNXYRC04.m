@@ -169,7 +169,8 @@ function U = HestonExplicitClassicCNXYRC04(params,K,r,q,S,V,T, mode, iterations,
         [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
         %[X, Y] = GMRES_XYv01(x, y, NS, NV, ds, dv, S, V, r, q, kappa, theta, lambda, sigma, rho, K, Tmax, t, T, BXc, BYc, x, y, restart, tol, max_iter, dt);
 
-    end    
+    end
+    [X,Y]=CompressData(X, Y, epsilon);
     U=X*Y';
 end
 

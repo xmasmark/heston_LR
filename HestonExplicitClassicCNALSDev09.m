@@ -135,6 +135,9 @@ function U = HestonExplicitClassicCNALSDev09(params,K,r,q,S,V,T, mode, iteration
     xALS = [X,zeros(NS,10)];
     yALS = [Y,orthonormal_basis(:,1:10)];
 
+    % xALS = [X,zeros(NS,10)];
+    % yALS = [Y,zeros(NV,10)];
+
     % xALS = X;
     % yALS = Y;
     % 
