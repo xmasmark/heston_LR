@@ -28,8 +28,8 @@ Tmin = 0;  Tmax = Mat;
 % nS = 79;        % Stock price
 % nV = 39;        % Volatility
 
-nS = 29;        % Stock price -- 99 --29
-nV = 19;        % Volatility  -- 99 --19
+nS = 99;        % Stock price -- 99 --29
+nV = 99;        % Volatility  -- 99 --19
 nT = 100;      % Maturity    -- 1000 
 
 % The maturity time increment and grid
@@ -133,7 +133,7 @@ UvHEClassicCNXYdev = HestonExplicitClassicCNXYRC04(params,K,r,q,Sm,Vm,T,2, itera
 timeElapsedXY = toc;
 
 tic
-UvHEClassicCNXYLeanDev = HestonExplicitClassicCNALSDev08(params,K,r,q,Sm,Vm,T,2,iterations, restart);
+UvHEClassicCNXYLeanDev = HestonExplicitClassicCNALSDev09(params,K,r,q,Sm,Vm,T,2,iterations, restart);
 %UvHEClassicCNXYLeanDev = HestonExplicitClassicCNXYRC04(params,K,r,q,Sm,Vm,T,2, iterations, restart);
 timeElapsedLean = toc;
 
