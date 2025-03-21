@@ -132,8 +132,8 @@ function U = HestonExplicitClassicCNALSDev08(params,K,r,q,S,V,T, mode, iteration
 
     normalizedY = Y / norm(Y);
     orthonormal_basis = null(normalizedY');
-    xALS = [X,zeros(NS,6)];
-    yALS = [Y,orthonormal_basis(:,1:6)];
+    xALS = [X,zeros(NS,10)];
+    yALS = [Y,orthonormal_basis(:,1:10)];
 
     % xALS = X;
     % yALS = Y;
@@ -156,24 +156,24 @@ function U = HestonExplicitClassicCNALSDev08(params,K,r,q,S,V,T, mode, iteration
 
         tol = 1e-5;  % Tolerance for convergence and compression
         
-        % % % discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
-        % % % b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
-        % % % 
-        % % % %tol = 1e-5;  % Tolerance for convergence and compression
-        % % % [x,y]=CompressData(X,Y,tol);
-        % % % [AX,AY] = LowRankMatVec(A,B,x,y);
-        % % % [BX,BY] = HestonMatVecBoundariesLean(b1x,b2x,b3x,b4x,b5x,b1y,b2y,b3y,b4y,b5y);
-        % % % %half Euler step
-        % % % FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
-        % % % FY = [           y,         AY,    BY];
-        % % % %Right hand side vector components
-        % % % [BXc,BYc]=CompressData(FX, FY, tol);
-        % % % 
-        % % % max_iter = iterations;  % Maximum number of iterations
-        % % % 
-        % % % %residualPre =  ALSEnergyPlus(A, B, x, y, BXc, BYc);
-        % % % [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
-        % % % %residualPost =  ALSEnergyPlus(A, B, X, Y, BXc, BYc);
+        discountedPayoff = max((S - K * exp(-r * (Tmax - T(t)))), 0);
+        b3x = [discountedPayoff', S'];%In this case rank 2 because of the shape of the condition
+
+        % %tol = 1e-5;  % Tolerance for convergence and compression
+        % [x,y]=CompressData(X,Y,tol);
+        % [AX,AY] = LowRankMatVec(A,B,x,y);
+        % [BX,BY] = HestonMatVecBoundariesLean(b1x,b2x,b3x,b4x,b5x,b1y,b2y,b3y,b4y,b5y);
+        % %half Euler step
+        % FX = [(1-r*dt/2)*x,  (dt/2)*AX, dt*BX]; 
+        % FY = [           y,         AY,    BY];
+        % %Right hand side vector components
+        % [BXc,BYc]=CompressData(FX, FY, tol);
+        % 
+        % max_iter = iterations;  % Maximum number of iterations
+        % 
+        % %residualPre =  ALSEnergyPlus(A, B, x, y, BXc, BYc);
+        % [X, Y] = GMRES_LowRankV01(x,y, A, B, r, BXc, BYc, x, y, restart, tol, max_iter, dt);
+        % %residualPost =  ALSEnergyPlus(A, B, X, Y, BXc, BYc);
 
         % xALS = X;
         % yALS = Y;
@@ -195,10 +195,10 @@ function U = HestonExplicitClassicCNALSDev08(params,K,r,q,S,V,T, mode, iteration
         %[xALS,yALS]=ALSOptimizationW(Ap, Bp, xALS, yALS, BXc, BYc, epsilon, max_iter, restart);
         [xALS,yALS]=ALSOptimizationW(Ap, Bp, xALS, yALS, BXc, BYc, epsilon, max_iter, restart);        
         
-        % firstNorm = norm(X*Y','fro');
-        % secondNorm = norm(xALS*yALS','fro');
-        % difference = norm(X*Y'-xALS*yALS','fro');
-        % fprintf('XY norm: %d, xALSyALS norm: %.4e\n', firstNorm, secondNorm);
+        firstNorm = norm(X*Y','fro');
+        secondNorm = norm(xALS*yALS','fro');
+        difference = norm(X*Y'-xALS*yALS','fro');
+        fprintf('XY norm: %d, xALSyALS norm: %.4e difference: %.4e\n', firstNorm, secondNorm, difference);
 
     end    
     % U=X*Y';
@@ -223,7 +223,7 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
     y_opt = y;
     n = 1;
 
-    convergence_iterations = 100;
+    convergence_iterations = 1000;
 
     residual =  ALSEnergyPlus(A, B, x, y, BX, BY);
     [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
@@ -575,7 +575,7 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
     relativeErrorY = norm(x*y'-X_OptR*Y_Opt','fro')/norm(X_OptR*Y_Opt','fro');
     % relativeErrorY = norm(x*y'-x*Y_Opt','fro')/norm(x*Y_Opt','fro');
 
-    %fprintf('X relative error: %d, Y relative error: %d\n', relativeErrorX, relativeErrorY);
+    fprintf('X relative error: %d, Y relative error: %d\n', relativeErrorX, relativeErrorY);
 
     %calculation of residuals to control the progress
 
