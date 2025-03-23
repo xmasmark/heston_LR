@@ -1,4 +1,4 @@
-function [price, error, time] = ALS_DataPoints(nS, nV, nT, S0, V0, cnIterations)
+function [ClosedPrice, price, error, time] = ALS_DataPoints(nS, nV, nT, S0, V0, cnIterations)
 
     % Illustration of pricing using uniform and non-uniform grids
 
