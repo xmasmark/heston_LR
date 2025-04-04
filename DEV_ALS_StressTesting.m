@@ -38,9 +38,9 @@ nt = 1000;
 % % % % % % % 
 
 %[price, error, time] = ALS_DataPoints(nS, nV, nT, S0, V0, cnIterations);
-nt = 200;
-cnIterations = 100;
-[ClosedPrice10, price10, error10, time10] = ALS_DataPoints(59, 49, nt, S0, V0, cnIterations);
+nt = 1000;
+cnIterations = 10;
+[ClosedPrice10, price10, error10, time10] = ALS_DataPoints(99, 99, nt, S0, V0, cnIterations);
 % [ClosedPrice20, price20, error20, time20] = ALS_DataPoints(39, 29, nt, S0, V0, cnIterations);
 % [ClosedPrice30, price30, error30, time30] = ALS_DataPoints(49, 39, nt, S0, V0, cnIterations);
 % [ClosedPrice40, price40, error40, time40] = ALS_DataPoints(59, 49, nt, S0, V0, cnIterations);

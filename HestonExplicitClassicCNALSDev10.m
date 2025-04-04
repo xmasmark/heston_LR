@@ -228,9 +228,9 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
 
     convergence_iterations = cnIterations;
 
-    initialResidual =  ALSEnergyPlus(A, B, x, y, BX, BY);
+    % initialResidual =  ALSEnergyPlus(A, B, x, y, BX, BY);
 
-    [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
+    [x_opt, y_opt, benchmarkNorm] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
 
     % if(abs(residual)>epsilon)
     %     [x_opt, y_opt] = increase_rank(x_opt,y_opt, A, B, 50, epsilon);
@@ -240,9 +240,22 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
     %     fprintf('rank: %d \n', rank);
     % end
     
-    while initialResidual > epsilon 
-        [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
-        residual = ALSEnergyPlus(A, B, x_opt, y_opt, BX, BY);
+    %while initialResidual > epsilon 
+    while n < convergence_iterations
+        [x_opt, y_opt, newNorm] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
+        % residual = ALSEnergyPlus(A, B, x_opt, y_opt, BX, BY);
+
+        if n > 3
+            if newNorm > benchmarkNorm
+                break;
+            else
+                benchmarkNorm = newNorm;
+            end
+        end
+
+
+        
+
 
         % if(abs(residual)>epsilon)
         %     [x_opt, y_opt] = increase_rank(x_opt,y_opt, A, B, 50, epsilon);
@@ -261,11 +274,11 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
             break
         end
 
-        if residual > initialResidual*1.01
-            break
-        else
-            initialResidual = residual;
-        end
+        % if residual > initialResidual*1.01
+        %     break
+        % else
+        %     initialResidual = residual;
+        % end
     end
 
     X = x_opt;
@@ -469,7 +482,7 @@ function residual = ALSEnergyPlus(A, B, x, y, BXc, BYc)
     residual = (0.5*(one_side) - other_side);
 end
 
-function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)
+function [X, Y, nn] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)
 
     szA = size(A);
     NS = szA(1);
@@ -517,6 +530,7 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
 
     x0=reshape(x,NS*r,1);
 
+    nonSymX = 0;
     %nonSymX = norm(A_hat_matrix-A_hat_matrix','fro')/norm(A_hat_matrix,'fro');
 
     %[x, flag, relres, iter]
@@ -527,7 +541,7 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
 
     X_OptR = reshape(X_Opt,NS,r);
 
-    %relativeErrorX = norm(x*y'-X_OptR*y','fro')/norm(X_OptR*y','fro');
+    relativeErrorX = norm(x*y'-X_OptR*y','fro')/norm(X_OptR*y','fro');
 
     % oldEnergy = ALSEnergyPlus(A, B, x, y, BXc, BYc);
     % newEnergy = ALSEnergyPlus(A, B, X_OptR, y, BXc, BYc);
@@ -590,12 +604,15 @@ function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, re
     X_Opt = reshape(X_Opt,NS,r);
     Y_Opt = reshape(Y_Opt,NV,r);
 
-    % relativeErrorY = norm(x*y'-X_OptR*Y_Opt','fro')/norm(X_OptR*Y_Opt','fro');
+    relativeErrorY = norm(x*y'-X_OptR*Y_Opt','fro')/norm(X_OptR*Y_Opt','fro');
     % relativeErrorY = norm(x*y'-x*Y_Opt','fro')/norm(x*Y_Opt','fro');
 
     %fprintf('X relative error: %d, Y relative error: %d\n', relativeErrorX, relativeErrorY);
 
     %calculation of residuals to control the progress
+
+    %norm = (nonSymX + nonSymY)*0.5;
+    nn = relativeErrorY;
 
     X=X_Opt;
     Y=Y_Opt;
