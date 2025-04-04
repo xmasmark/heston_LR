@@ -228,7 +228,8 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
 
     convergence_iterations = cnIterations;
 
-    residual =  ALSEnergyPlus(A, B, x, y, BX, BY);
+    initialResidual =  ALSEnergyPlus(A, B, x, y, BX, BY);
+
     [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
 
     % if(abs(residual)>epsilon)
@@ -239,7 +240,7 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
     %     fprintf('rank: %d \n', rank);
     % end
     
-    while abs(residual) > epsilon 
+    while initialResidual > epsilon 
         [x_opt, y_opt] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
         residual = ALSEnergyPlus(A, B, x_opt, y_opt, BX, BY);
 
@@ -258,6 +259,12 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
 
         if n > convergence_iterations
             break
+        end
+
+        if residual > initialResidual*1.01
+            break
+        else
+            initialResidual = residual;
         end
     end
 
@@ -439,9 +446,15 @@ function residual = ALSEnergyPlus(A, B, x, y, BXc, BYc)
     XA = pagemtimes(A,x);
     XAt = permute(XA,[2,1,3]); %transpose each layer of XA
     XAX = pagemtimes(XAt,x);
+    %added today 20250330
+    %XAXt = permute(XAX,[2,1,3]);
+    XAXt = XAX;
 
-    xv = reshape(YBY,r*r*R,1);
-    yv = reshape(XAX,r*r*R,1);
+    %added today 20250330 -- YBYt
+    % YBYt = permute(YBY,[2,1,3]);
+    YBYt = YBY;
+    xv = reshape(YBYt,r*r*R,1);
+    yv = reshape(XAXt,r*r*R,1);
 
     one_side = xv'*yv;
     
@@ -453,7 +466,7 @@ function residual = ALSEnergyPlus(A, B, x, y, BXc, BYc)
     two = reshape(yBYc,1,s(1)*s(2));
     other_side = two*one;
 
-    residual = 0.5*(one_side) - other_side;
+    residual = (0.5*(one_side) - other_side);
 end
 
 function [X, Y] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter, restart)

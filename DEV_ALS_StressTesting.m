@@ -40,12 +40,12 @@ nt = 1000;
 %[price, error, time] = ALS_DataPoints(nS, nV, nT, S0, V0, cnIterations);
 nt = 200;
 cnIterations = 100;
-[ClosedPrice10, price10, error10, time10] = ALS_DataPoints(29, 19, nt, S0, V0, cnIterations);
-[ClosedPrice20, price20, error20, time20] = ALS_DataPoints(39, 29, nt, S0, V0, cnIterations);
-[ClosedPrice30, price30, error30, time30] = ALS_DataPoints(49, 39, nt, S0, V0, cnIterations);
-[ClosedPrice40, price40, error40, time40] = ALS_DataPoints(59, 49, nt, S0, V0, cnIterations);
-[ClosedPrice50, price50, error50, time50] = ALS_DataPoints(69, 59, nt, S0, V0, cnIterations);
-[ClosedPrice100, price100, error100, time100] = ALS_DataPoints(79, 69, nt, S0, V0, cnIterations);
+[ClosedPrice10, price10, error10, time10] = ALS_DataPoints(59, 49, nt, S0, V0, cnIterations);
+% [ClosedPrice20, price20, error20, time20] = ALS_DataPoints(39, 29, nt, S0, V0, cnIterations);
+% [ClosedPrice30, price30, error30, time30] = ALS_DataPoints(49, 39, nt, S0, V0, cnIterations);
+% [ClosedPrice40, price40, error40, time40] = ALS_DataPoints(59, 49, nt, S0, V0, cnIterations);
+% [ClosedPrice50, price50, error50, time50] = ALS_DataPoints(69, 59, nt, S0, V0, cnIterations);
+% [ClosedPrice100, price100, error100, time100] = ALS_DataPoints(79, 69, nt, S0, V0, cnIterations);
 % [ClosedPrice200, price200, error200, time200] = ALS_DataPoints(29, 19, 100, S0, V0, 200);
 % [ClosedPrice300, price300, error300, time300] = ALS_DataPoints(29, 19, 100, S0, V0, 300);
 
@@ -53,12 +53,12 @@ cnIterations = 100;
 fprintf('-------------------------------------------------------------------------------------------------------------------------------------\n')
 fprintf('Method                                          Price      Closed Price DollarError  Execution time       NS       NV    CNIterations\n')
 fprintf('-------------------------------------------------------------------------------------------------------------------------------------\n')
-fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price10, ClosedPrice10,error10, time10, 30, 20, 100)
-fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price20, ClosedPrice20,error20, time20, 40, 30, 100)
-fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price30, ClosedPrice20,error30, time30, 50, 40, 100)
-fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price40, ClosedPrice20,error40, time40, 60, 50, 100)
-fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price50, ClosedPrice20,error50, time50, 70, 60, 100)
-fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price100, ClosedPrice100,error100, time100, 80, 70, 100)
+fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price10, ClosedPrice10,error10, time10, 100, 100, 100)
+% fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price20, ClosedPrice20,error20, time20, 40, 30, 100)
+% fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price30, ClosedPrice20,error30, time30, 50, 40, 100)
+% fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price40, ClosedPrice20,error40, time40, 60, 50, 100)
+% fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price50, ClosedPrice20,error50, time50, 70, 60, 100)
+% fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price100, ClosedPrice100,error100, time100, 80, 70, 100)
 % fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price200, ClosedPrice200,error200, time200, 30, 20, 200)
 % fprintf('Heston Classic CN ALS  Low Rank Lean       %10.4f        %10.4f      %5.2f       %10.4f       %d       %d             %d\n',price300, ClosedPrice300,error300, time300, 30, 20, 300)
 %fprintf('Dmitry is the BEST                                                         \n')
