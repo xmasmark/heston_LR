@@ -242,14 +242,14 @@ function [X, Y] = ALSOptimizationW(A, B, x, y, BX, BY, epsilon, max_iter, restar
     
     %while initialResidual > epsilon 
     while n < convergence_iterations
-        [x_opt, y_opt, newNorm] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
+        [x_opt, y_opt, relativeError] = ALSOptimizationV04(A, B, x_opt, y_opt, BX, BY, epsilon, max_iter, restart);
         % residual = ALSEnergyPlus(A, B, x_opt, y_opt, BX, BY);
 
-        if n > 3
-            if newNorm > benchmarkNorm
+        if n > 50
+            if relativeError > benchmarkNorm
                 break;
             else
-                benchmarkNorm = newNorm;
+                benchmarkNorm = relativeError;
             end
         end
 
@@ -604,7 +604,8 @@ function [X, Y, nn] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter
     X_Opt = reshape(X_Opt,NS,r);
     Y_Opt = reshape(Y_Opt,NV,r);
 
-    relativeErrorY = norm(x*y'-X_OptR*Y_Opt','fro')/norm(X_OptR*Y_Opt','fro');
+    % relativeErrorY = norm(x*y'-X_OptR*Y_Opt','fro')/norm(X_OptR*Y_Opt','fro');
+    relativeError = norm(x*y'-X_OptR*Y_Opt','fro')/norm(x*y','fro');
     % relativeErrorY = norm(x*y'-x*Y_Opt','fro')/norm(x*Y_Opt','fro');
 
     %fprintf('X relative error: %d, Y relative error: %d\n', relativeErrorX, relativeErrorY);
@@ -612,7 +613,7 @@ function [X, Y, nn] = ALSOptimizationV04(A, B, x, y, BXc, BYc, epsilon, max_iter
     %calculation of residuals to control the progress
 
     %norm = (nonSymX + nonSymY)*0.5;
-    nn = relativeErrorY;
+    nn = relativeError;
 
     X=X_Opt;
     Y=Y_Opt;

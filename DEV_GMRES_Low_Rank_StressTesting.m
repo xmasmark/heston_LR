@@ -51,8 +51,8 @@ cnIterations = 50;
 %[ClosedPrice50, price50, error50, time50] = GMRES_Low_Rank_DataPoints(49, 49, nt, S0, V0, cnIterations);
 %[ClosedPrice100, price100, error100, time100] = GMRES_Low_Rank_DataPoints(299, 299, nt, S0, V0, cnIterations);
 
-standardNS = 499;
-standardNV = 499;
+standardNS = 1399;
+standardNV = 99;
 % nt200 = 200;
 % [ClosedPrice200, price200, error200, time200] = GMRES_Low_Rank_DataPoints(standardNS, standardNV, nt200, S0, V0, cnIterations);
 % nt300 = 300;

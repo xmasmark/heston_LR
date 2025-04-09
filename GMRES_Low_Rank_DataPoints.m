@@ -22,7 +22,11 @@ function [ClosedPrice, price, error, time] = GMRES_Low_Rank_DataPoints(nS, nV, n
     params = [kappa theta sigma v0 rho lambda];
     
     % Minimum and maximum values for the Stock Price, Volatility, and Maturity
-    Smin = 0;  Smax = 2*K;
+    % Smin = 0;  Smax = 2*K;
+    % Vmin = 0;  Vmax = 0.5;
+    % Tmin = 0;  Tmax = Mat;
+
+    Smin = 0;  Smax = 3*K;
     Vmin = 0;  Vmax = 0.5;
     Tmin = 0;  Tmax = Mat;
     
