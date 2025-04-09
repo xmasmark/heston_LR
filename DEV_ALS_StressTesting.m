@@ -38,8 +38,8 @@ nt = 1000;
 % % % % % % % 
 
 %[price, error, time] = ALS_DataPoints(nS, nV, nT, S0, V0, cnIterations);
-nt = 1000;
-cnIterations = 200;
+nt = 200;
+cnIterations = 50;
 ns=99;
 nv=99;
 [ClosedPrice10, price10, error10, time10] = ALS_DataPoints(ns, nv, nt, S0, V0, cnIterations);

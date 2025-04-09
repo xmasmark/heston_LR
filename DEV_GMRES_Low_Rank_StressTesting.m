@@ -38,7 +38,7 @@ V0 = 0.05412;
 % % % % % % % 
 
 %[price, error, time] = ALS_DataPoints(nS, nV, nT, S0, V0, cnIterations);
-nt = 500;
+nt = 200;
 cnIterations = 50;
 
 

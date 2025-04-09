@@ -112,10 +112,10 @@ function [ClosedPrice, price, error, time] = GMRES_Low_Rank_DataPoints(nS, nV, n
     end
     
     % Solve the PDE
-    U = HestonExplicitPDENonUniformGrid(params,K,r,q,S,V,T);
+    % U = HestonExplicitPDENonUniformGrid(params,K,r,q,S,V,T);
     
     % Obtain the price by 2-D interpolation
-    NonUniformPrice = interp2(V,S,U,V0,S0);
+    % NonUniformPrice = interp2(V,S,U,V0,S0);
     
     
     %% Closed form Price and errors
