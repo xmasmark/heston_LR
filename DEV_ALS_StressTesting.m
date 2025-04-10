@@ -37,6 +37,24 @@ nt = 1000;
 % % % % % % % fprintf('-------------------------------------------------------------------------------------------------------------------------------------\n')
 % % % % % % % 
 
+
+% Strike price, risk free rate, dividend yield, and maturity
+K = 100;
+r = 0.02;
+q = 0.05;
+Mat = 0.15;
+    
+% Heston parameters
+kappa =  1.5;
+theta =  0.04;
+sigma =  0.3;
+rho   = -0.9;
+v0    =  0.05;
+lambda = 0;
+
+             % HestonVanillaClosedForm(S,  K,   T, r, kappa, theta, sigma, rho, v0, type)
+closePriceRL = HestonVanillaClosedForm(S0, K, Mat, r, kappa, theta, sigma, rho, v0, 'call');
+
 %[price, error, time] = ALS_DataPoints(nS, nV, nT, S0, V0, cnIterations);
 nt = 200;
 cnIterations = 50;
