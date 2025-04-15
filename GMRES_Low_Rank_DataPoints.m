@@ -78,6 +78,7 @@ function [ClosedPrice, price, error, time] = GMRES_Low_Rank_DataPoints(nS, nV, n
     tic
 
     %UvHEClassicCNXYLeanDev = HestonExplicitClassicCNALSDev10(params,K,r,q,Sm,Vm,T,2,iterations, restart, cnIterations);
+    % [UvHEClassicCNXYLeanDev, SNU, VNU] = HestonExplicitClassicCNXYRC06(params,K,r,q,Sm,Vm,T,nT,iterations,restart);
     UvHEClassicCNXYLeanDev = HestonExplicitClassicCNXYRC05(params,K,r,q,Sm,Vm,T,nT,iterations,restart);
     timeElapsedLean = toc;
     
@@ -93,6 +94,7 @@ function [ClosedPrice, price, error, time] = GMRES_Low_Rank_DataPoints(nS, nV, n
     
     % UvHEClassicCNXYdevPrice = interp2(Vm,Sm,UvHEClassicCNXYdev,V0,S0);
     UvHEClassicCNXYLeanDevPrice = interp2(Vm,Sm,UvHEClassicCNXYLeanDev,V0,S0);
+    % UvHEClassicCNXYLeanDevPrice = interp2(VNU,SNU,UvHEClassicCNXYLeanDev,V0,S0);    
 
     %% Pricing Using a Non-Uniform Grid
     % The stock price grid
