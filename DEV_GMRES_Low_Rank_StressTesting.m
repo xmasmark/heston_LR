@@ -51,15 +51,15 @@ cnIterations = 50;
 %[ClosedPrice50, price50, error50, time50] = GMRES_Low_Rank_DataPoints(49, 49, nt, S0, V0, cnIterations);
 %[ClosedPrice100, price100, error100, time100] = GMRES_Low_Rank_DataPoints(299, 299, nt, S0, V0, cnIterations);
 
-standardNS = 99;
-standardNV = 99;
+standardNS = 199;
+standardNV = 49;
 % nt200 = 200;
 % [ClosedPrice200, price200, error200, time200] = GMRES_Low_Rank_DataPoints(standardNS, standardNV, nt200, S0, V0, cnIterations);
 % nt300 = 300;
 % [ClosedPrice300, price300, error300, time300] = GMRES_Low_Rank_DataPoints(standardNS, standardNV, nt300, S0, V0, cnIterations);
 % nt400 = 400;
 % [ClosedPrice400, price400, error400, time400] = GMRES_Low_Rank_DataPoints(standardNS, standardNV, nt400, S0, V0, cnIterations);
-nt500 = 500;
+nt500 = 2000;
 [ClosedPrice500, price500, error500, time500] = GMRES_Low_Rank_DataPoints(standardNS, standardNV, nt500, S0, V0, cnIterations);
 % [ClosedPrice300, price300, error300, time300] = ALS_DataPoints(29, 19, 100, S0, V0, 300);
 
